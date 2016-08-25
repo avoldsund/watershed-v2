@@ -2,6 +2,45 @@ from lib import util
 import numpy as np
 import math
 
+def test_fill_single_cell_depressions():
+
+    rows = 1
+    cols = 1
+    heights = np.array([[5, 6, 7], [12, 2, 8], [11, 10, 9]])
+    filled = np.array([[5, 6, 7], [12, 5, 8], [11, 10, 9]])
+
+    result_filled = util.fill_single_cell_depressions(heights, rows, cols)
+
+    assert np.array_equal(filled, result_filled)
+
+
+def test_fill_single_cell_depressions_advanced():
+
+    rows = 3
+    cols = 2
+    heights = np.array([[1, 3, 5, 6], [3, 4, 2, 7], [5, 5, 5, 7],
+                        [7, 1, 1, 7], [7, 7, 7, 7]])
+    filled = np.array([[1, 3, 5, 6], [3, 4, 3, 7], [5, 5, 5, 7],
+                       [7, 1, 1, 7], [7, 7, 7, 7]])
+
+    result_filled = util.fill_single_cell_depressions(heights, rows, cols)
+
+    assert np.array_equal(filled, result_filled)
+
+
+def test_fill_single_cell_depressions_three_minima():
+
+    rows = 3
+    cols = 3
+    heights = np.array([[5, 5, 5, 5, 5], [5, 0, 2, -1, 5], [5, 2, 2, 2, 5],
+                        [5, 2, 0, 1, 5], [5, 5, 5, 5, 5]])
+    filled = np.array([[5, 5, 5, 5, 5], [5, 2, 2, 2, 5], [5, 2, 2, 2, 5],
+                       [5, 2, 1, 1, 5], [5, 5, 5, 5, 5]])
+
+    result_filled = util.fill_single_cell_depressions(heights, rows, cols)
+
+    assert np.array_equal(filled, result_filled)
+
 
 def test_get_neighbor_heights():
 
@@ -68,33 +107,15 @@ def test_get_flow_directions():
                         [6, 77, 59, 75],
                         [68, 65, 7, 35],
                         [11, 31, 69, 20]])
+    pos_flow_directions = np.array([[32, 8],
+                                    [2, -1]])
 
-    flow_directions = np.array([[5, 3],
-                                [1, 2]])
-
-    result_flow_directions = util.get_flow_directions(heights, step_size, rows, cols)
-
-    assert np.array_equal(flow_directions, result_flow_directions)
-
-
-def test_get_positive_flow_directions():
-
-    rows = 2
-    cols = 2
-    step_size = 10
-    heights = np.array([[18, 63, 59, 3],
-                        [6, 77, 59, 75],
-                        [68, 65, 7, 35],
-                        [11, 31, 69, 20]])
-    pos_flow_directions = np.array([[5, 3],
-                                    [1, -1]])
-
-    result_pos_flow_directions = util.get_positive_flow_directions(heights, step_size, rows, cols)
+    result_pos_flow_directions = util.get_flow_directions(heights, step_size, rows, cols)
 
     assert np.array_equal(pos_flow_directions, result_pos_flow_directions)
 
 
-def test_get_positive_flow_directions_advanced():
+def test_get_flow_directions_advanced():
 
     rows = 3
     cols = 4
@@ -104,69 +125,109 @@ def test_get_positive_flow_directions_advanced():
                         [7, 2, 4, 5, 5, 4],
                         [7, 7, 3.9, 4, 0, 0],
                         [6, 5, 4, 4, 0, 0]])
-    pos_flow_directions = np.array([[-1, 5, 3, 0],
-                                    [-1, 5, 2, 3],
-                                    [7, 6, 1, -1]])
+    flow_directions = np.array([[-1, 32, 8, 1],
+                                [-1, 32, 4, 8],
+                                [128, 64, 2, -1]])
 
-    result_pos_flow_directions = util.get_positive_flow_directions(heights, step_size, rows, cols)
+    result_pos_flow_directions = util.get_flow_directions(heights, step_size, rows, cols)
 
-    assert np.array_equal(pos_flow_directions, result_pos_flow_directions)
-
-
-def test_get_downslope_neighbors():
-
-    rows = 3
-    cols = 4
-    step_size = 10
-    heights = np.array([[5, 7, 8, 7, 6, 0],
-                        [7, 2, 10, 10, 7, 6],
-                        [7, 2, 4, 5, 5, 4],
-                        [7, 7, 3.9, 4, 0, 0],
-                        [6, 5, 4, 4, 0, 0]])
-    downslope_neighbors = np.array([[[0, 0], [0, 0], [1, 2], [0, 3]],
-                                    [[1, 0], [1, 1], [2, 3], [2, 3]],
-                                    [[1, 0], [1, 0], [2, 3], [2, 3]]])
-
-    result_downslope_neighbors = util.get_downslope_neighbors(heights, step_size, rows, cols)
-
-    assert np.array_equal(downslope_neighbors, result_downslope_neighbors)
+    assert np.array_equal(flow_directions, result_pos_flow_directions)
 
 
-def test_fill_single_cell_depressions():
+def test_remove_out_of_boundary_flow():
 
-    rows = 1
-    cols = 1
-    heights = np.array([[5, 6, 7], [12, 2, 8], [11, 10, 9]])
-    filled = np.array([[5, 6, 7], [12, 5, 8], [11, 10, 9]])
+    flow_directions = np.array([[-1, 32, 8, 1],
+                                [-1, 32, 4, 8],
+                                [128, 64, 2, -1]])
 
-    result_filled = util.fill_single_cell_depressions(heights, rows, cols)
+    new_flow_directions = np.array([[-1, 32, 8, -1],
+                                    [-1, 32, 4, 8],
+                                    [128, 64, 2, -1]])
 
-    assert np.array_equal(filled, result_filled)
+    util.remove_out_of_boundary_flow(flow_directions)
 
-
-def test_fill_single_cell_depressions_advanced():
-
-    rows = 3
-    cols = 2
-    heights = np.array([[1, 3, 5, 6], [3, 4, 2, 7], [5, 5, 5, 7],
-                        [7, 1, 1, 7], [7, 7, 7, 7]])
-    filled = np.array([[1, 3, 5, 6], [3, 4, 3, 7], [5, 5, 5, 7],
-                       [7, 1, 1, 7], [7, 7, 7, 7]])
-
-    result_filled = util.fill_single_cell_depressions(heights, rows, cols)
-
-    assert np.array_equal(filled, result_filled)
+    assert np.array_equal(flow_directions, new_flow_directions)
 
 
-def test_fill_single_cell_depressions_three_minima():
+def test_remove_out_of_boundary_flow_advanced():
 
-    rows = 3
-    cols = 3
-    heights = np.array([[5, 5, 5, 5, 5], [5, 0, 2, -1, 5], [5, 2, 2, 2, 5],
-                        [5, 2, 0, 1, 5], [5, 5, 5, 5, 5]])
-    filled = np.array([[5, 5, 5, 5, 5], [5, 2, 2, 2, 5], [5, 2, 2, 2, 5],
-                       [5, 2, 1, 1, 5], [5, 5, 5, 5, 5]])
+    flow_directions = np.array([[2, 64, 4, 128, 1],
+                                [64, 16, 4, 32, 32],
+                                [32, 64, 128, 1, 2],
+                                [16, 16, 8, 4, 128],
+                                [4, 32, 16, 8, 4]])
 
-    result_filled = util.fill_single_cell_depressions(heights, rows, cols)
+    new_flow_directions = np.array([[2, -1, 4, -1, -1],
+                                    [-1, 16, 4, 32, 32],
+                                    [-1, 64, 128, 1, -1],
+                                    [-1, 16, 8, 4, 128],
+                                    [-1, 32, -1, -1, -1]])
 
-    assert np.array_equal(filled, result_filled)
+    util.remove_out_of_boundary_flow(flow_directions)
+
+    assert np.array_equal(flow_directions, new_flow_directions)
+
+
+def test_create_nbr_connectivity_matrix():
+
+    flow_directions = np.array([[8, -1],
+                                [2, -1]])
+
+    conn_mat = np.array([[1, 0, 1, 0],
+                         [0, 1, 0, 0],
+                         [0, 0, 1, 1],
+                         [0, 0, 0, 1]])
+
+    result_conn_mat = util.create_nbr_connectivity_matrix(flow_directions, 2, 2)
+
+    assert np.array_equal(conn_mat, result_conn_mat.todense())
+
+
+def test_create_nbr_connectivity_matrix_square():
+
+    flow_directions = np.array([[2, 8, 8],
+                                [8, 2, -1],
+                                [2, 2, 128]])
+
+    conn_mat = np.array([[1, 1, 0, 0, 0, 0, 0, 0, 0],
+                         [0, 1, 0, 0, 1, 0, 0, 0, 0],
+                         [0, 0, 1, 0, 0, 1, 0, 0, 0],
+                         [0, 0, 0, 1, 0, 0, 1, 0, 0],
+                         [0, 0, 0, 0, 1, 1, 0, 0, 0],
+                         [0, 0, 0, 0, 0, 1, 0, 0, 0],
+                         [0, 0, 0, 0, 0, 0, 1, 1, 0],
+                         [0, 0, 0, 0, 0, 0, 0, 1, 1],
+                         [0, 0, 0, 0, 0, 1, 0, 0, 1]])
+
+    result_conn_mat = util.create_nbr_connectivity_matrix(flow_directions, 3, 3)
+
+    assert np.array_equal(conn_mat, result_conn_mat.todense())
+
+
+def test_create_nbr_connectivity_matrix_advanced():
+
+    flow_directions = np.array([[-1, 32, 8, 1],
+                                [-1, 32, 4, 8],
+                                [128, 64, 2, -1]])
+
+    conn_mat = np.array([[1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                         [1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                         [0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0],
+                         [0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0],
+                         [0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0],
+                         [0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0],
+                         [0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1],
+                         [0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1],
+                         [0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0],
+                         [0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0],
+                         [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1],
+                         [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1]])
+
+    result_conn_mat = util.create_nbr_connectivity_matrix(flow_directions, 4, 3)
+
+    assert np.array_equal(conn_mat, result_conn_mat.todense())
+
+
+def test_connect_all_nodes():
+
+    

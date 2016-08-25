@@ -2,6 +2,7 @@ import numpy as np
 import math
 import scipy.ndimage.filters as filters
 import scipy.ndimage.morphology as morphology
+from scipy.sparse import csr_matrix
 
 
 def detect_local_minima(arr):
@@ -106,99 +107,93 @@ def get_derivatives(heights, nbr_heights, step_size):
 
 def get_flow_directions(heights, step_size, rows, cols):
     """
-    Returns the steepest directions for all nodes
-    :param heights: The heights for all nodes in the 2D-grid
-    :param step_size: Step size in the grid
-    :param rows: Nr of rows
-    :param cols: Nr of columns
-    :return max_indices/flow_directions: The neighbor index indicating steepest slope
-    """
-
-    nbr_heights = get_neighbor_heights(heights, rows, cols)
-    derivatives = get_derivatives(heights, nbr_heights, step_size)
-    max_indices = np.argmax(derivatives, axis=2)
-
-    #flow_directions = 2 ** max_indices
-
-    return max_indices
-
-
-def get_positive_flow_directions(heights, step_size, rows, cols):
-    """
-    Returns the steepest directions for all nodes and setting -1 for nodes with no lower neighbors
+    Returns the steepest directions for all nodes and setting -1 for local minima and flat areas
     :param heights: The heights for all nodes in the 2D-grid
     :param step_size: Step size in the grid
     :param rows: Nr of rows for interior
     :param cols: Nr of columns for interior
-    :return: max_indices/flow_directions: The neighbor index indicating steepest slope
+    :return: flow_directions: The neighbor index indicating steepest slope
     """
 
     nbr_heights = get_neighbor_heights(heights, rows, cols)
     derivatives = get_derivatives(heights, nbr_heights, step_size)
 
-    max_indices = np.ones((rows, cols), dtype=int) * -1
-    pos_derivatives = np.max(derivatives, axis=2) > 0
-    max_indices[pos_derivatives] = np.argmax(derivatives, axis=2)[pos_derivatives]
+    flow_directions = np.ones((rows, cols), dtype=int) * -1
+    pos_derivatives = np.max(derivatives, axis=2) > 0  # Positive derivatives aren't minima or flat
+    flow_directions[pos_derivatives] = np.argmax(derivatives, axis=2)[pos_derivatives]
+    flow_directions[pos_derivatives] = 2 ** flow_directions[pos_derivatives]
 
-    return max_indices
-
-
-def get_downslope_neighbors(heights, step_size, rows, cols):
-
-    nbr_heights = get_neighbor_heights(heights, rows, cols)
-    derivatives = get_derivatives(heights, nbr_heights, step_size)
-    
+    return flow_directions
 
 
-def get_node_endpoints(cols, rows, downslope_neighbors):
+def remove_out_of_boundary_flow(flow_directions):
     """
-    Returns the end node if one follows the down slope until reaching a local minimum, for every node
-    :param cols: Number of nodes is x-direction
-    :param rows: Number of nodes in y-direction
-    :param downslope_neighbors: Indices of the downslope neighbor for each node. Equal to -1 if the node is a minimum.
-    :return terminal_nodes: The indices of the end nodes
+    Replaces flow out of the boundary by flagging node as minimum/flat area (-1)
+    :param flow_directions: The directions of flow for every node
+    :return: Void function that alters flow_directions
     """
 
-    total_nodes = cols * rows
-    terminal_nodes = np.empty(total_nodes, dtype=object)
-    indices_in_terminal = np.zeros(total_nodes, dtype=bool)
+    # If flow direction is out of the boundary, set flow direction to -1
 
-    # The nodes itself are minimums
-    indices_node_is_minimum = np.where(downslope_neighbors == -1)[0]
-    terminal_nodes[indices_node_is_minimum] = indices_node_is_minimum
-    indices_in_terminal[indices_node_is_minimum] = True
+    change_top = np.concatenate((np.where(flow_directions[0, :] == 1)[0],
+                                np.where(flow_directions[0, :] == 64)[0],
+                                np.where(flow_directions[0, :] == 128)[0]))
+    change_right = np.concatenate((np.where(flow_directions[:, -1] == 1)[0],
+                                  np.where(flow_directions[:, -1] == 2)[0],
+                                  np.where(flow_directions[:, -1] == 4)[0]))
+    change_bottom = np.concatenate((np.where(flow_directions[-1, :] == 4)[0],
+                                   np.where(flow_directions[-1, :] == 8)[0],
+                                   np.where(flow_directions[-1, :] == 16)[0]))
+    change_left = np.concatenate((np.where(flow_directions[:, 0] == 16)[0],
+                                 np.where(flow_directions[:, 0] == 32)[0],
+                                 np.where(flow_directions[:, 0] == 64)[0]))
 
-    num_of_end_nodes_inserted = len(indices_node_is_minimum)
-
-    while num_of_end_nodes_inserted > 0:
-        num_of_end_nodes_inserted, terminal_nodes = update_terminal_nodes(terminal_nodes, downslope_neighbors,
-                                                                          indices_in_terminal)
-
-    # DO WE REALLY NEED BOTH TERMINAL NODES AND INDICES_IN_TERMINAL????????????????????????????????????????????????
-    # YES, BECAUSE WE CAN HAVE 0 (FALSE) AS AN ENDPOINT...?
-    # POSSIBLE TO WORK AROUND THIS PROBLEM, I THINK
-    return terminal_nodes
+    flow_directions[0, change_top] = -1
+    flow_directions[change_right, -1] = -1
+    flow_directions[-1, change_bottom] = -1
+    flow_directions[change_left, 0] = -1
+    # This function does not return something, just change the input flow_directions
 
 
-def update_terminal_nodes(terminal_nodes, downslope_neighbors, indices_in_terminal):
+def create_nbr_connectivity_matrix(flow_directions, nx, ny):
     """
-    Returns an updated terminal_nodes and the number of new end points found.
-    The method finds all indices which haven't gotten end nodes yet, and takes a step in the down slope direction. If
-    the down slope is a local minimum, these indices will now get end points in terminal_nodes. These end points will be
-    found from terminal_nodes.
-    :param downslope_neighbors: Indices of the downslope neighbor for each node. Equal to -1 if the node is a minimum.
-    :return terminal_nodes: The indices of the end nodes
+    Create a connectivity matrix between all nodes using the flow
+    :param flow_directions: 2D-grid showing the flow
+    :param nx: Number of cols
+    :param ny: Number of rows
+    :return A: Returns a sparse adjacency matrix
     """
 
-    indices_end_points_not_localized = np.where(indices_in_terminal == False)[0]
-    indices_to_check_if_downslopes_are_minimum = downslope_neighbors[indices_end_points_not_localized]
-    downslope_is_minimum = np.concatenate((np.where(terminal_nodes[indices_to_check_if_downslopes_are_minimum] == 0)[0],
-                                           np.nonzero(terminal_nodes[indices_to_check_if_downslopes_are_minimum])[0]))
+    # Start by removing the flow out of the boundary
+    remove_out_of_boundary_flow(flow_directions)
 
-    indices = indices_end_points_not_localized[downslope_is_minimum]
-    values = terminal_nodes[indices_to_check_if_downslopes_are_minimum[downslope_is_minimum]]
+    values = [1, 2, 4, 8, 16, 32, 64, 128]
+    translations = [-nx + 1, 1, nx + 1, nx, nx - 1, -1, -nx - 1, -nx]
+    from_indices = []
+    to_indices = []
+    total_nodes = nx * ny
 
-    terminal_nodes[indices] = values
-    indices_in_terminal[indices] = True
+    for ix in range(len(values)):
+        coords = np.where(flow_directions == values[ix])
+        if len(coords[0]) > 0:
+            from_ix = coords[0] * nx + coords[1]
+            to_ix = from_ix + translations[ix]
+            from_indices.append(from_ix)
+            to_indices.append(to_ix)
 
-    return len(values), terminal_nodes
+    # Every node can go to itself, diagonal elements
+    diag_from = np.arange(0, total_nodes, 1)
+    diag_to = np.arange(0, total_nodes, 1)
+    from_indices.append(diag_from)
+    to_indices.append(diag_to)
+    rows = np.concatenate(from_indices)
+    cols = np.concatenate(to_indices)
+    data = np.ones(len(rows))
+
+    A = csr_matrix((data, (rows, cols)), shape=(total_nodes, total_nodes))
+
+    return A
+
+
+def connect_all_nodes(adjacency_matrix):
+
