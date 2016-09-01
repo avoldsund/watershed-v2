@@ -2,7 +2,10 @@ import numpy as np
 import math
 import scipy.ndimage.filters as filters
 import scipy.ndimage.morphology as morphology
-from scipy.sparse import csr_matrix
+from scipy.sparse import csr_matrix, identity
+import itertools
+import networkx
+import time
 
 
 def detect_local_minima(arr):
@@ -70,7 +73,7 @@ def get_neighbor_heights(heights, rows, cols):
     :return nbr_heights: nx x ny x 8 grid
     """
 
-    nbr_heights = np.zeros((rows, cols, 8), dtype=int)
+    nbr_heights = np.zeros((rows, cols, 8))
 
     nbr_heights[:, :, 0] = heights[0:-2, 2:]    # 1
     nbr_heights[:, :, 1] = heights[1:-1, 2:]    # 2
@@ -95,11 +98,9 @@ def get_derivatives(heights, nbr_heights, step_size):
 
     interior_heights = heights[1:-1, 1:-1]
     delta = np.repeat(interior_heights[:, :, np.newaxis], 8, axis=2) - nbr_heights
-
     diag = math.sqrt(step_size ** 2 + step_size ** 2)
     card = step_size
     distance = np.array([diag, card, diag, card, diag, card, diag, card])
-
     derivatives = np.divide(delta, distance)
 
     return derivatives
@@ -119,7 +120,7 @@ def get_flow_directions(heights, step_size, rows, cols):
     derivatives = get_derivatives(heights, nbr_heights, step_size)
 
     flow_directions = np.ones((rows, cols), dtype=int) * -1
-    pos_derivatives = np.max(derivatives, axis=2) > 0  # Positive derivatives aren't minima or flat
+    pos_derivatives = np.max(derivatives, axis=2) > 0  # Posine areas of true in 2d grid pythonitive derivatives aren't minima or flat
     flow_directions[pos_derivatives] = np.argmax(derivatives, axis=2)[pos_derivatives]
     flow_directions[pos_derivatives] = 2 ** flow_directions[pos_derivatives]
 
@@ -156,6 +157,7 @@ def remove_out_of_boundary_flow(flow_directions):
 
 
 def create_nbr_connectivity_matrix(flow_directions, nx, ny):
+    # Note: This is a version without 1 on the diagonal
     """
     Create a connectivity matrix between all nodes using the flow
     :param flow_directions: 2D-grid showing the flow
@@ -181,19 +183,130 @@ def create_nbr_connectivity_matrix(flow_directions, nx, ny):
             from_indices.append(from_ix)
             to_indices.append(to_ix)
 
-    # Every node can go to itself, diagonal elements
-    diag_from = np.arange(0, total_nodes, 1)
-    diag_to = np.arange(0, total_nodes, 1)
-    from_indices.append(diag_from)
-    to_indices.append(diag_to)
     rows = np.concatenate(from_indices)
     cols = np.concatenate(to_indices)
     data = np.ones(len(rows))
 
-    A = csr_matrix((data, (rows, cols)), shape=(total_nodes, total_nodes))
+    adj_mat = csr_matrix((data, (rows, cols)), shape=(total_nodes, total_nodes))
 
-    return A
+    return adj_mat
 
 
-def connect_all_nodes(adjacency_matrix):
+def get_minima(adj_mat):
+    """
+    Returns the indices of the local minima
+    :param adj_mat: Matrix showing where flow occurs
+    :return minima: Indices of the minima
+    """
 
+    minima = np.where(np.diff(adj_mat.indptr) == 0)[0]
+
+    return minima
+
+
+def get_downslope_rivers(adj_mat):
+    """
+    Returns a matrix showing all downslope nodes for each node
+    :param adj_mat: Matrix showing where flow occurs
+    :return downslope_rivers: Sparse matrix with ones at downslope nodes
+    """
+
+    rows, cols = np.shape(adj_mat)
+    changes = True
+    id_matrix = identity(rows, dtype=int, format='csr')
+    downslope_rivers = adj_mat + id_matrix  # Set diagonal to 1
+
+    AA = adj_mat
+
+    while changes:
+        changes = False
+        AA = csr_matrix.dot(AA, adj_mat)
+
+        if AA.nnz > 0:
+            changes = True
+            downslope_rivers = AA + downslope_rivers
+
+    return downslope_rivers
+
+
+def get_local_watersheds(downslope_rivers, local_minima):
+
+    ws = csr_matrix.dot(downslope_rivers, csr_matrix.transpose(downslope_rivers))
+
+    local_watersheds = {}
+
+    for m in local_minima:
+        local_watersheds[m] = csr_matrix.getrow(ws, m).indices
+
+    return local_watersheds
+
+
+def map_1d_interior_to_2d_exterior(node_index, number_of_cols):
+
+    r = node_index/number_of_cols + 1
+    c = node_index % number_of_cols + 1
+    row_col = set(zip(r, c))
+
+    return row_col
+
+
+def map_2d_exterior_to_1d_interior(coords, cols):
+
+    indices = []
+    for c in coords:
+        ix = c[1] - 1 + (c[0] - 1) * cols
+        indices.append(ix)
+
+    return indices
+
+
+def get_row_and_col_from_indices(node_indices, number_of_cols):
+    """
+    Return (r, c) for all indices in node_indices.
+    :param node_indices: Indices in the 1d-grid.
+    :param number_of_cols: Number of columns in the 2d-grid.
+    :return row_col: (r, c) for every index
+    """
+
+    row_col = np.empty((len(node_indices), 2), dtype=int)
+    row_col[:, 0] = np.divide(node_indices, number_of_cols)
+    row_col[:, 1] = node_indices % number_of_cols
+
+    return row_col
+
+
+def combine_minima(local_minima, nx_interior):
+
+    print len(local_minima)
+    min_coords = map_1d_interior_to_2d_exterior(local_minima, nx_interior)
+
+    G = networkx.Graph()
+    # Set difference between indices of each minimum and all minima
+
+    while min_coords:
+        m = min_coords.pop()
+        nbrs = set(itertools.product(range(m[0]-1, m[0]+2), range(m[1]-1, m[1]+2)))
+        nbrs.remove(m)
+        setdiff = nbrs.intersection(min_coords)
+        ind = map_2d_exterior_to_1d_interior(setdiff, nx_interior)
+        m_ix = m[1] - 1 + (m[0] - 1) * nx_interior
+        pairs = zip([m_ix], ind)
+        if len(pairs) > 0:
+            G.add_edges_from(pairs)
+        else:
+            G.add_node(m_ix)
+
+    minimums_in_watershed = networkx.connected_components(G)
+
+    minimums_in_watershed = [list(el) for el in minimums_in_watershed]
+
+    return minimums_in_watershed
+
+
+def get_watersheds_with_combined_minima(combined_minima, local_watersheds):
+
+    watersheds = []
+    for c in combined_minima:
+        watersheds.append(np.concatenate([local_watersheds[el] for el in c]))
+
+    return watersheds

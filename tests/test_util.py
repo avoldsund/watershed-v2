@@ -1,6 +1,7 @@
-from lib import util
+from lib import util, compare_methods
 import numpy as np
 import math
+from scipy.sparse import csr_matrix
 
 def test_fill_single_cell_depressions():
 
@@ -134,6 +135,23 @@ def test_get_flow_directions_advanced():
     assert np.array_equal(flow_directions, result_pos_flow_directions)
 
 
+def test_get_flow_directions_float():
+
+    rows = 2
+    cols = 2
+    step_size = 10
+    heights = np.array([[399.8, 396.9, 392.7, 386.9],
+                        [402.5, 399.4, 394.8, 388.8],
+                        [405.4, 402.0, 396.5, 389.5],
+                        [407.9, 404.8, 398.4, 389.6]])
+    flow_directions = np.array([[1, 2],
+                                [2, 2]])
+
+    result_pos_flow_directions = util.get_flow_directions(heights, step_size, rows, cols)
+
+    assert np.array_equal(flow_directions, result_pos_flow_directions)
+
+
 def test_remove_out_of_boundary_flow():
 
     flow_directions = np.array([[-1, 32, 8, 1],
@@ -173,10 +191,10 @@ def test_create_nbr_connectivity_matrix():
     flow_directions = np.array([[8, -1],
                                 [2, -1]])
 
-    conn_mat = np.array([[1, 0, 1, 0],
-                         [0, 1, 0, 0],
-                         [0, 0, 1, 1],
-                         [0, 0, 0, 1]])
+    conn_mat = np.array([[0, 0, 1, 0],
+                         [0, 0, 0, 0],
+                         [0, 0, 0, 1],
+                         [0, 0, 0, 0]])
 
     result_conn_mat = util.create_nbr_connectivity_matrix(flow_directions, 2, 2)
 
@@ -189,15 +207,15 @@ def test_create_nbr_connectivity_matrix_square():
                                 [8, 2, -1],
                                 [2, 2, 128]])
 
-    conn_mat = np.array([[1, 1, 0, 0, 0, 0, 0, 0, 0],
-                         [0, 1, 0, 0, 1, 0, 0, 0, 0],
-                         [0, 0, 1, 0, 0, 1, 0, 0, 0],
-                         [0, 0, 0, 1, 0, 0, 1, 0, 0],
-                         [0, 0, 0, 0, 1, 1, 0, 0, 0],
+    conn_mat = np.array([[0, 1, 0, 0, 0, 0, 0, 0, 0],
+                         [0, 0, 0, 0, 1, 0, 0, 0, 0],
                          [0, 0, 0, 0, 0, 1, 0, 0, 0],
-                         [0, 0, 0, 0, 0, 0, 1, 1, 0],
-                         [0, 0, 0, 0, 0, 0, 0, 1, 1],
-                         [0, 0, 0, 0, 0, 1, 0, 0, 1]])
+                         [0, 0, 0, 0, 0, 0, 1, 0, 0],
+                         [0, 0, 0, 0, 0, 1, 0, 0, 0],
+                         [0, 0, 0, 0, 0, 0, 0, 0, 0],
+                         [0, 0, 0, 0, 0, 0, 0, 1, 0],
+                         [0, 0, 0, 0, 0, 0, 0, 0, 1],
+                         [0, 0, 0, 0, 0, 1, 0, 0, 0]])
 
     result_conn_mat = util.create_nbr_connectivity_matrix(flow_directions, 3, 3)
 
@@ -210,24 +228,152 @@ def test_create_nbr_connectivity_matrix_advanced():
                                 [-1, 32, 4, 8],
                                 [128, 64, 2, -1]])
 
-    conn_mat = np.array([[1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-                         [1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-                         [0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0],
-                         [0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0],
+    conn_mat = np.array([[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                         [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                         [0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0],
+                         [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                         [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
                          [0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0],
-                         [0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0],
-                         [0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1],
-                         [0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1],
-                         [0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0],
-                         [0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0],
-                         [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1],
-                         [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1]])
+                         [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+                         [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+                         [0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0],
+                         [0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0],
+                         [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+                         [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]])
 
     result_conn_mat = util.create_nbr_connectivity_matrix(flow_directions, 4, 3)
 
     assert np.array_equal(conn_mat, result_conn_mat.todense())
 
 
-def test_connect_all_nodes():
+def test_get_minima():
 
-    
+    rows = np.array([0, 2])
+    cols = np.array([2, 3])
+    data = np.array([1, 1])
+    adj_mat = csr_matrix((data, (rows, cols)), shape=(4, 4))
+
+    minimums = np.array([1, 3])
+
+    result_minimums = util.get_minima(adj_mat)
+
+    assert np.array_equal(minimums, result_minimums)
+
+
+def test_get_minima_advanced():
+
+    rows = np.array([0, 1, 2, 3, 4, 6, 7, 8])
+    cols = np.array([1, 4, 5, 6, 5, 7, 8, 5])
+    data = np.array([1, 1, 1, 1, 1, 1, 1, 1])
+    adj_mat = csr_matrix((data, (rows, cols)), shape=(9, 9))
+
+    minimums = np.array([5])
+
+    result_minimums = util. get_minima(adj_mat)
+
+    assert np.array_equal(minimums, result_minimums)
+
+
+def test_get_downslope_rivers():
+
+    rows = np.array([0, 2])
+    cols = np.array([2, 3])
+    data = np.array([1, 1])
+    adj_mat = csr_matrix((data, (rows, cols)), shape=(4, 4))
+
+    rows_d_r = np.array([0, 0, 0, 1, 2, 2, 3])
+    cols_d_r = np.array([0, 2, 3, 1, 2, 3, 3])
+    data_d_r = np.array([1, 1, 1, 1, 1, 1, 1])
+    downslope_rivers = csr_matrix((data_d_r, (rows_d_r, cols_d_r)), shape=(4, 4))
+
+    result_downslope_rivers = util.get_downslope_rivers(adj_mat)
+
+    assert np.array_equal(downslope_rivers.todense(), result_downslope_rivers.todense())
+
+
+def test_get_downslope_rivers_advanced():
+
+    rows = np.array([0, 1, 2, 3, 4, 6, 7, 8])
+    cols = np.array([1, 4, 5, 6, 5, 7, 8, 5])
+    data = np.array([1, 1, 1, 1, 1, 1, 1, 1])
+    adj_mat = csr_matrix((data, (rows, cols)), shape=(9, 9))
+
+    rows_d_r = np.array([0, 0, 0, 0, 1, 1, 1, 2, 2, 3, 3, 3, 3, 3, 4, 4, 5, 6, 6, 6, 6, 7, 7, 7, 8, 8])
+    cols_d_r = np.array([0, 1, 4, 5, 1, 4, 5, 2, 5, 3, 5, 6, 7, 8, 4, 5, 5, 5, 6, 7, 8, 5, 7, 8, 5, 8])
+    data_d_r = np.array([1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1])
+    downslope_rivers = csr_matrix((data_d_r, (rows_d_r, cols_d_r)), shape=(9, 9))
+
+    result_downslope_rivers = util.get_downslope_rivers(adj_mat)
+
+    assert np.array_equal(downslope_rivers.todense(), result_downslope_rivers.todense())
+
+
+def test_get_local_watersheds_two_minima():
+
+    minimums = np.array([1, 3])
+
+    rows = np.array([0, 0, 0, 1, 2, 2, 3])
+    cols = np.array([0, 2, 3, 1, 2, 3, 3])
+    data = np.array([1, 1, 1, 1, 1, 1, 1])
+    downslope_rivers = csr_matrix((data, (rows, cols)), shape=(4, 4))
+
+    local_watersheds = {1: np.array([1]), 3: np.array([0, 2, 3])}
+    result_local_watersheds = util.get_local_watersheds(downslope_rivers, minimums)
+
+    for m in result_local_watersheds:
+        result_local_watersheds[m] = np.sort(result_local_watersheds[m])
+
+    assert compare_methods.compare_two_dictionaries_where_values_are_arrays(local_watersheds, result_local_watersheds)
+
+
+def test_get_local_watersheds_one_min():
+
+    minimums = np.array([5])
+
+    rows = np.array([0, 0, 0, 0, 1, 1, 1, 2, 2, 3, 3, 3, 3, 3, 4, 4, 5, 6, 6, 6, 6, 7, 7, 7, 8, 8])
+    cols = np.array([0, 1, 4, 5, 1, 4, 5, 2, 5, 3, 5, 6, 7, 8, 4, 5, 5, 5, 6, 7, 8, 5, 7, 8, 5, 8])
+    data = np.array([1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1])
+    downslope_rivers = csr_matrix((data, (rows, cols)), shape=(9, 9))
+
+    local_watersheds = {5: np.array([0, 1, 2, 3, 4, 5, 6, 7, 8])}
+    result_local_watersheds = util.get_local_watersheds(downslope_rivers, minimums)
+
+    for m in result_local_watersheds:
+        result_local_watersheds[m] = np.sort(result_local_watersheds[m])
+
+    assert compare_methods.compare_two_dictionaries_where_values_are_arrays(local_watersheds, result_local_watersheds)
+
+
+def test_combine_minima():
+
+    nx_interior = 2
+    local_minima = np.array([1, 3])
+
+    comb_min = [[1, 3]]
+    result_comb_min = util.combine_minima(local_minima, nx_interior)
+    print result_comb_min
+    assert sorted(comb_min) == sorted(result_comb_min)
+
+
+def test_combine_minima_advanced():
+    nx_interior = 4
+    local_minima = np.array([0, 3, 4, 11])
+
+    comb_min = [[0, 4], [3], [11]]
+    result_comb_min = util.combine_minima(local_minima, nx_interior)
+
+    assert sorted(comb_min) == sorted(result_comb_min)
+
+
+def test_get_watersheds_with_combined_minima():
+
+    comb_min = [[0, 4], [3], [11]]
+    local_watersheds = {0: np.array([0, 1]), 4: np.array([4, 5, 8, 9]),
+                        3: np.array([3]), 11: np.array([2, 6, 7, 10, 11])}
+
+    watersheds = [np.array([0, 1, 4, 5, 8, 9]), np.array([3]), np.array([2, 6, 7, 10, 11])]
+    result_watersheds = util.get_watersheds_with_combined_minima(comb_min, local_watersheds)
+
+    are_equal = compare_methods.compare_two_lists_of_arrays(watersheds, result_watersheds)
+
+    assert are_equal
