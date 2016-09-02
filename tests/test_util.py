@@ -3,6 +3,37 @@ import numpy as np
 import math
 from scipy.sparse import csr_matrix
 
+
+def test_map_2d_to_1d():
+
+    rows = 3
+    cols = 4
+    coords_rows = np.array([0, 0, 0, 1, 1, 2, 2])
+    coords_cols = np.array([0, 2, 3, 1, 3, 0, 3])
+    coords = (coords_rows, coords_cols)
+
+    indices = np.array([0, 2, 3, 5, 7, 8, 11])
+
+    result_indices = util.map_2d_to_1d(coords, cols)
+
+    assert np.array_equal(indices, result_indices)
+
+
+def test_map_1d_to_2d():
+
+    rows = 3
+    cols = 4
+    indices = np.array([0, 2, 3, 5, 7, 8, 11])
+
+    coords_rows = np.array([0, 0, 0, 1, 1, 2, 2])
+    coords_cols = np.array([0, 2, 3, 1, 3, 0, 3])
+    coords = (coords_rows, coords_cols)
+
+    result_coords = util.map_1d_to_2d(indices, cols)
+
+    assert np.array_equal(coords, result_coords)
+
+
 def test_fill_single_cell_depressions():
 
     rows = 1
@@ -150,6 +181,40 @@ def test_get_flow_directions_float():
     result_pos_flow_directions = util.get_flow_directions(heights, step_size, rows, cols)
 
     assert np.array_equal(flow_directions, result_pos_flow_directions)
+
+
+def test_get_flow_direction_indices():
+
+    rows = 3
+    cols = 4
+    step_size = 10
+    heights = np.array([[5, 7, 8, 7, 6, 0],
+                        [7, 2, 10, 10, 7, 6],
+                        [7, 2, 4, 5, 5, 4],
+                        [7, 7, 3.9, 4, 0, 0],
+                        [6, 5, 4, 4, 0, 0]])
+
+    flow_direction_indices = np.array([[-1, 0, 6, -1],
+                                       [-1, 4, 11, 11],
+                                       [4, 4, 11, -1]])
+
+    result_flow_direction_indices = util.get_flow_direction_indices(heights, step_size, rows, cols)
+
+    assert np.array_equal(flow_direction_indices, result_flow_direction_indices)
+
+
+def test_get_node_endpoints():
+
+    downslope_neighbors = np.array([[-1, 0, 6, -1],
+                                    [-1, 4, 11, 11],
+                                    [4, 4, 11, -1]])
+    node_endpoints = np.array([[0, 0, 11, 3],
+                               [4, 4, 11, 11],
+                               [4, 4, 11, 11]])
+
+    result_node_endpoints = util.get_node_endpoints(downslope_neighbors)
+
+    assert np.array_equal(node_endpoints, result_node_endpoints)
 
 
 def test_remove_out_of_boundary_flow():

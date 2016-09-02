@@ -106,21 +106,21 @@ def get_derivatives(heights, nbr_heights, step_size):
     return derivatives
 
 
-def get_flow_directions(heights, step_size, rows, cols):
+def get_flow_directions(heights, step_size, int_rows, int_cols):
     """
     Returns the steepest directions for all nodes and setting -1 for local minima and flat areas
     :param heights: The heights for all nodes in the 2D-grid
     :param step_size: Step size in the grid
-    :param rows: Nr of rows for interior
-    :param cols: Nr of columns for interior
+    :param int_rows: Nr of int_rows for interior
+    :param int_cols: Nr of columns for interior
     :return: flow_directions: The neighbor index indicating steepest slope
     """
 
-    nbr_heights = get_neighbor_heights(heights, rows, cols)
+    nbr_heights = get_neighbor_heights(heights, int_rows, int_cols)
     derivatives = get_derivatives(heights, nbr_heights, step_size)
 
-    flow_directions = np.ones((rows, cols), dtype=int) * -1
-    pos_derivatives = np.max(derivatives, axis=2) > 0  # Posine areas of true in 2d grid pythonitive derivatives aren't minima or flat
+    flow_directions = np.ones((int_rows, int_cols), dtype=int) * -1
+    pos_derivatives = np.max(derivatives, axis=2) > 0
     flow_directions[pos_derivatives] = np.argmax(derivatives, axis=2)[pos_derivatives]
     flow_directions[pos_derivatives] = 2 ** flow_directions[pos_derivatives]
 
@@ -154,6 +154,83 @@ def remove_out_of_boundary_flow(flow_directions):
     flow_directions[-1, change_bottom] = -1
     flow_directions[change_left, 0] = -1
     # This function does not return something, just change the input flow_directions
+
+
+def get_flow_direction_indices(heights, step_size, int_rows, int_cols):
+
+    flow_directions = get_flow_directions(heights, step_size, int_rows, int_cols)
+    remove_out_of_boundary_flow(flow_directions)
+
+    values = [1, 2, 4, 8, 16, 32, 64, 128]
+    translations = [-int_cols + 1, 1, int_cols + 1, int_cols, int_cols - 1, -1, -int_cols - 1, -int_cols]
+
+    for ix in range(len(values)):
+        coords = np.where(flow_directions == values[ix])
+        if len(coords[0]) > 0:
+            from_ix = coords[0] * int_cols + coords[1]
+            to_ix = from_ix + translations[ix]
+            flow_directions[coords] = to_ix
+
+    return flow_directions
+
+
+def map_2d_to_1d(coords, cols):
+
+    indices = coords[1] + coords[0] * cols
+
+    return indices
+
+
+def map_1d_to_2d(indices, cols):
+
+    rows = np.divide(indices, cols)
+    cols = indices % cols
+
+    return rows, cols
+
+
+def get_node_endpoints(downslope_neighbors):
+
+    rows, cols = np.shape(downslope_neighbors)
+    terminal_nodes = np.empty((rows, cols), dtype=object)
+
+    # Get all minima as starting points for stepwise algorithm
+    minima = np.where(downslope_neighbors == -1)
+    terminal_nodes[minima] = map_2d_to_1d(minima, cols)
+    num_inserted = len(minima[0])
+    it = 0
+    while num_inserted > 0:
+        it += 1
+        print it
+        num_inserted, terminal_nodes = update_terminal_nodes(terminal_nodes, downslope_neighbors, cols)
+
+    return terminal_nodes
+
+
+def update_terminal_nodes(terminal_nodes, downslope_neighbors, cols):
+
+    start = time.time()
+    no_terminal_nodes = np.where(terminal_nodes < 0)  # Indices of all nodes without terminal nodes yet
+    end = time.time()
+    print 'Time for loop: ', end - start
+
+    if len(no_terminal_nodes[0]) == 0:
+        return 0, terminal_nodes
+    next_nodes = downslope_neighbors[no_terminal_nodes]  # Check if these nodes are minima, or if they have endpoints
+
+    # The next point is a minimum
+    are_minima = np.where(downslope_neighbors[map_1d_to_2d(next_nodes, cols)] == -1)[0]
+    terminal_nodes[(no_terminal_nodes[0][are_minima], no_terminal_nodes[1][are_minima])] = next_nodes[are_minima]
+
+    # The next point might have an end node
+    undecided = np.setdiff1d(range(len(next_nodes)), are_minima)  # Might be nodes already assigned end points
+    are_end_points = undecided[np.where(terminal_nodes[map_1d_to_2d(next_nodes[undecided], cols)] >= 0)[0]]
+    terminal_nodes[(no_terminal_nodes[0][are_end_points], no_terminal_nodes[1][are_end_points])] = \
+        terminal_nodes[map_1d_to_2d(next_nodes[are_end_points], cols)]
+
+    num_inserted = len(are_minima) + len(are_end_points)
+
+    return num_inserted, terminal_nodes
 
 
 def create_nbr_connectivity_matrix(flow_directions, nx, ny):
@@ -310,3 +387,5 @@ def get_watersheds_with_combined_minima(combined_minima, local_watersheds):
         watersheds.append(np.concatenate([local_watersheds[el] for el in c]))
 
     return watersheds
+
+
