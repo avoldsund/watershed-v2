@@ -2,11 +2,11 @@ import numpy as np
 import math
 import scipy.ndimage.filters as filters
 import scipy.ndimage.morphology as morphology
-from scipy.sparse import csr_matrix, identity
+from scipy.sparse import csr_matrix, identity, csgraph
 import itertools
 import networkx
 import time
-
+import matplotlib.pyplot as plt
 
 def detect_local_minima(arr):
     # Found at: http://stackoverflow.com/questions/3986345/how-to-find-the-local-minima-of-a-smooth-
@@ -175,13 +175,24 @@ def get_flow_direction_indices(heights, step_size, int_rows, int_cols):
 
 
 def map_2d_to_1d(coords, cols):
-
+    """
+    Map from a 2D-grid to a 1D-array
+    :param coords: Coords in a tuple (coords_rows, coords_cols)
+    :param cols: Nr of columns
+    :return indices: Indices in the 1D-array
+    """
     indices = coords[1] + coords[0] * cols
 
     return indices
 
 
 def map_1d_to_2d(indices, cols):
+    """
+    Map from a 1D-array to a 2D-grid
+    :param indices: Indices in the 1D-array
+    :param cols: Number of columns in the 2D-grid
+    :return rows, cols: Tuple containing the row and col indices
+    """
 
     rows = np.divide(indices, cols)
     cols = indices % cols
@@ -198,10 +209,8 @@ def get_node_endpoints(downslope_neighbors):
     minima = np.where(downslope_neighbors == -1)
     terminal_nodes[minima] = map_2d_to_1d(minima, cols)
     num_inserted = len(minima[0])
-    it = 0
+
     while num_inserted > 0:
-        it += 1
-        print it
         num_inserted, terminal_nodes = update_terminal_nodes(terminal_nodes, downslope_neighbors, cols)
 
     return terminal_nodes
@@ -209,10 +218,8 @@ def get_node_endpoints(downslope_neighbors):
 
 def update_terminal_nodes(terminal_nodes, downslope_neighbors, cols):
 
-    start = time.time()
+    # IMPLEMENT HAS TERMINAL NODES
     no_terminal_nodes = np.where(terminal_nodes < 0)  # Indices of all nodes without terminal nodes yet
-    end = time.time()
-    print 'Time for loop: ', end - start
 
     if len(no_terminal_nodes[0]) == 0:
         return 0, terminal_nodes
@@ -231,6 +238,102 @@ def update_terminal_nodes(terminal_nodes, downslope_neighbors, cols):
     num_inserted = len(are_minima) + len(are_end_points)
 
     return num_inserted, terminal_nodes
+
+
+def get_local_watersheds(node_endpoints):
+
+    endpoints = node_endpoints.flatten()
+    unique, counts = np.unique(endpoints, return_counts=True)
+    sorted_indices = np.argsort(endpoints)
+    indices_to_endpoints = np.split(sorted_indices, np.cumsum(counts))[0:-1]
+    local_watersheds = dict(zip(unique, indices_to_endpoints))
+
+    return local_watersheds
+
+
+def map_1d_interior_to_2d_exterior(node_index, number_of_cols):
+
+    r = node_index/number_of_cols + 1
+    c = node_index % number_of_cols + 1
+    row_col = zip(r, c)
+
+    return row_col
+
+
+def map_2d_exterior_to_1d_interior(coords, cols):
+
+    indices = []
+    for c in coords:
+        ix = c[1] - 1 + (c[0] - 1) * cols
+        indices.append(ix)
+
+    return indices
+
+
+def combine_minima(local_minima, rows, cols):
+    """
+    Return the combined minima in the landscape as a list of arrays
+    :param local_minima: 1D-array with indices of all minima
+    :param rows: Nr of rows
+    :param cols: Nr of columns
+    :return combined_minima: List of arrays containing the combined minima
+    """
+
+    # local_minima = (rows, cols)
+    local_minima_2d = map_1d_to_2d(local_minima, cols)
+    one = (local_minima_2d[0] - 1, local_minima_2d[1] + 1)
+    two = (local_minima_2d[0], local_minima_2d[1] + 1)
+    four = local_minima_2d[0] + 1, local_minima_2d[1] + 1
+    eight = local_minima_2d[0] + 1, local_minima_2d[1]
+    sixteen = local_minima_2d[0] + 1, local_minima_2d[1] - 1
+    thirtytwo = local_minima_2d[0], local_minima_2d[1] - 1
+    sixtyfour = local_minima_2d[0] - 1, local_minima_2d[1] - 1
+    onetwentyeight = local_minima_2d[0] - 1, local_minima_2d[1]
+
+    nbrs_to_minima = np.hstack((one, two, four, eight, sixteen, thirtytwo, sixtyfour, onetwentyeight))
+    valid_nbrs_to_minima = np.where(np.logical_and(np.logical_and(nbrs_to_minima[0] >= 0, nbrs_to_minima[0] < rows),
+                                                   np.logical_and(nbrs_to_minima[1] >= 0, nbrs_to_minima[1] < cols)))[0]
+
+    from_min = np.concatenate([local_minima for i in range(8)])
+    to = map_2d_to_1d(nbrs_to_minima[:, valid_nbrs_to_minima], cols)
+    from_min = from_min[valid_nbrs_to_minima]
+
+    # Remove all connections not between minima
+    valid_pairs = np.where(np.in1d(to, local_minima))[0]
+    to = to[valid_pairs]
+    from_min = from_min[valid_pairs]
+    data = np.ones(len(to))
+
+    # Make connectivity matrix between pairs of minima
+    conn = csr_matrix((data, (from_min, to)), shape=(rows*cols, rows*cols), dtype=int)
+    n_components, labels = csgraph.connected_components(conn, directed=False)
+    unique, counts = np.unique(labels, return_counts=True)
+
+    sorted_indices = np.argsort(labels)
+
+    nodes_in_comb_min = np.split(sorted_indices, np.cumsum(counts))[0:-1]
+
+    combined_minima = [ws for ws in nodes_in_comb_min if len(ws) > 1]
+
+    already_located_minima = np.concatenate(combined_minima)
+    remaining_minima = np.setdiff1d(local_minima, already_located_minima)
+    [combined_minima.append(np.array([remaining_minima[i]])) for i in range(len(remaining_minima))]
+
+    return combined_minima
+
+
+def combine_watersheds(local_watersheds, combined_minima):
+
+    watersheds = []
+
+    for i in range(len(combined_minima)):
+        if len(combined_minima[i]) == 1:
+            watersheds.append(local_watersheds[list(combined_minima[i])[0]])
+        else:
+            ws = np.concatenate(list((local_watersheds[i] for i in combined_minima[i])))
+            watersheds.append(ws)
+
+    return watersheds
 
 
 def create_nbr_connectivity_matrix(flow_directions, nx, ny):
@@ -306,35 +409,16 @@ def get_downslope_rivers(adj_mat):
     return downslope_rivers
 
 
-def get_local_watersheds(downslope_rivers, local_minima):
-
-    ws = csr_matrix.dot(downslope_rivers, csr_matrix.transpose(downslope_rivers))
-
-    local_watersheds = {}
-
-    for m in local_minima:
-        local_watersheds[m] = csr_matrix.getrow(ws, m).indices
-
-    return local_watersheds
-
-
-def map_1d_interior_to_2d_exterior(node_index, number_of_cols):
-
-    r = node_index/number_of_cols + 1
-    c = node_index % number_of_cols + 1
-    row_col = set(zip(r, c))
-
-    return row_col
-
-
-def map_2d_exterior_to_1d_interior(coords, cols):
-
-    indices = []
-    for c in coords:
-        ix = c[1] - 1 + (c[0] - 1) * cols
-        indices.append(ix)
-
-    return indices
+#def get_local_watersheds(downslope_rivers, local_minima):
+#
+#    ws = csr_matrix.dot(downslope_rivers, csr_matrix.transpose(downslope_rivers))
+#
+#    local_watersheds = {}
+#
+#    for m in local_minima:
+#        local_watersheds[m] = csr_matrix.getrow(ws, m).indices
+#
+#    return local_watersheds
 
 
 def get_row_and_col_from_indices(node_indices, number_of_cols):
@@ -350,34 +434,6 @@ def get_row_and_col_from_indices(node_indices, number_of_cols):
     row_col[:, 1] = node_indices % number_of_cols
 
     return row_col
-
-
-def combine_minima(local_minima, nx_interior):
-
-    print len(local_minima)
-    min_coords = map_1d_interior_to_2d_exterior(local_minima, nx_interior)
-
-    G = networkx.Graph()
-    # Set difference between indices of each minimum and all minima
-
-    while min_coords:
-        m = min_coords.pop()
-        nbrs = set(itertools.product(range(m[0]-1, m[0]+2), range(m[1]-1, m[1]+2)))
-        nbrs.remove(m)
-        setdiff = nbrs.intersection(min_coords)
-        ind = map_2d_exterior_to_1d_interior(setdiff, nx_interior)
-        m_ix = m[1] - 1 + (m[0] - 1) * nx_interior
-        pairs = zip([m_ix], ind)
-        if len(pairs) > 0:
-            G.add_edges_from(pairs)
-        else:
-            G.add_node(m_ix)
-
-    minimums_in_watershed = networkx.connected_components(G)
-
-    minimums_in_watershed = [list(el) for el in minimums_in_watershed]
-
-    return minimums_in_watershed
 
 
 def get_watersheds_with_combined_minima(combined_minima, local_watersheds):
