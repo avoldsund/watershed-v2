@@ -503,3 +503,25 @@ def test_get_watersheds_with_combined_minima():
     are_equal = compare_methods.compare_two_lists_of_arrays(watersheds, result_watersheds)
 
     assert are_equal
+
+
+def test_get_boundary_pairs_in_watersheds():
+
+    num_of_cols = 9
+    num_of_rows = 9
+    watersheds = [np.array([10, 11, 12, 13, 19, 20, 21, 22, 28, 29, 30, 37, 38, 39]),
+                  np.array([14, 15, 16, 23, 24, 25, 31, 32, 33, 34, 40, 41, 42, 43, 51, 52, 60, 61, 69, 70]),
+                  np.array([46, 47, 48, 49, 50, 55, 56, 57, 58, 59, 64, 65, 66, 67, 68])]
+
+    result_boundary_nodes = [[np.array([13, 13, 22, 22, 22, 22, 21, 30, 30, 37, 37, 38, 38, 38, 39, 39, 39, 39, 39]),
+                              np.array([14, 23, 14, 23, 31, 32, 31, 31, 40, 46, 47, 46, 47, 48, 31, 40, 47, 48, 49])],
+                             [np.array([14, 14, 23, 23, 31, 31, 31, 31, 32, 40, 40, 40, 40, 40, 41, 41, 42, 51, 51, 60, 60, 60, 69, 69]),
+                              np.array([13, 22, 13, 22, 21, 22, 30, 39, 22, 30, 39, 48, 49, 50, 49, 50, 50, 50, 59, 50, 59, 68, 59, 68])],
+                             [np.array([46, 46, 47, 47, 47, 48, 48, 48, 49, 49, 49, 50, 50, 50, 50, 50, 59, 59, 59, 68, 68]),
+                              np.array([37, 38, 37, 38, 39, 38, 39, 40, 39, 40, 41, 40, 41, 42, 51, 60, 51, 60, 69, 60, 69])]]
+
+    boundary_nodes = util.get_boundary_pairs_in_watersheds(watersheds, num_of_cols, num_of_rows)
+
+    are_equal = compare_methods.compare_list_of_lists_by_comparing_sets(boundary_nodes, result_boundary_nodes)
+
+    assert are_equal

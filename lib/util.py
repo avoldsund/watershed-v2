@@ -87,6 +87,36 @@ def get_neighbor_heights(heights, rows, cols):
     return nbr_heights
 
 
+def get_neighbor_indices(rows, cols):
+
+    indices = np.arange(0, rows * cols, 1)
+    nbrs = np.zeros((rows * cols, 8), dtype=int)
+
+    nbrs[:, 0] = indices - cols + 1
+    nbrs[:, 1] = indices + 1
+    nbrs[:, 2] = indices + cols + 1
+    nbrs[:, 3] = indices + cols
+    nbrs[:, 4] = indices + cols - 1
+    nbrs[:, 5] = indices - 1
+    nbrs[:, 6] = indices - cols - 1
+    nbrs[:, 7] = indices - cols
+
+    return nbrs
+
+
+def get_domain_boundary_indices(cols, rows):
+
+    top = np.arange(0, cols, 1)
+    bottom = np.arange(cols * rows - cols, cols * rows, 1)
+    left = np.arange(cols, cols * rows - cols, cols)
+    right = np.arange(2 * cols - 1, cols * rows - 1, cols)
+
+    boundary_indices = np.concatenate((top, bottom, left, right))
+    boundary_indices.sort()
+
+    return boundary_indices
+
+
 def get_derivatives(heights, nbr_heights, step_size):
     """
     Returns the derivatives between all nodes and their neighbors
@@ -444,4 +474,31 @@ def get_watersheds_with_combined_minima(combined_minima, local_watersheds):
 
     return watersheds
 
+
+def get_boundary_pairs_in_watersheds(watersheds, nx, ny):
+
+    nbrs = get_neighbor_indices(ny, nx)
+    domain_bnd_nodes = get_domain_boundary_indices(nx, ny)
+
+    boundary_pairs = []
+
+    for watershed in watersheds:
+
+        watershed = np.sort(watershed)
+        nbrs_for_ws = nbrs[watershed]
+        nbrs_for_ws_1d = np.concatenate(nbrs_for_ws)
+
+        # Find nodes not in the watershed which aren't at the domain boundary
+        not_in_watershed_arr = np.in1d(nbrs_for_ws_1d, watershed, invert=True)
+        at_dom_boundary = np.in1d(nbrs_for_ws_1d, domain_bnd_nodes)
+        valid_nodes = np.where((not_in_watershed_arr - at_dom_boundary) == True)[0]
+
+        # Pairs in from-to format
+        repeat_from = np.repeat(watershed, 8)
+        from_indices = repeat_from[valid_nodes]
+        to_indices = nbrs_for_ws_1d[valid_nodes]
+        boundary_pairs_for_ws = [from_indices, to_indices]
+        boundary_pairs.append(boundary_pairs_for_ws)
+
+    return boundary_pairs
 

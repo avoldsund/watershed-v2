@@ -93,9 +93,58 @@ def test_compare_two_lists_of_arrays_four():
 def test_compare_two_lists_of_arrays_five():
     # The lists are equal
 
-    l1 = [np.array([1, 2, 3]), np.array([4, 5, 6])]
-    l2 = [np.array([1, 2, 3]), np.array([4, 5, 6])]
+    l1 = [[np.array([1, 2, 3]), np.array([4, 5, 6])]]
+    l2 = [[np.array([1, 2, 3]), np.array([4, 5, 6])]]
 
-    are_equal = compare_methods.compare_two_lists_of_arrays(l1, l2)
+    are_equal = compare_methods.compare_list_of_lists_by_comparing_sets(l1, l2)
+
+    assert are_equal is True
+
+
+def test_compare_list_of_lists_by_comparing_sets_one():
+    # Different length of the lists
+
+    l1 = [[np.array([1, 2]), np.array([3, 4])],
+          [np.array([5, 6]), np.array([7, 8])]]
+    l2 = [[np.array([1, 2]), np.array([3, 4])]]
+
+    are_equal = compare_methods.compare_list_of_lists_by_comparing_sets(l1, l2)
+
+    assert are_equal is False
+
+
+def test_compare_list_of_lists_by_comparing_sets_two():
+    # More elements in a list in one of the lists
+
+    l1 = [[np.array([1, 2]), np.array([3, 4])],
+          [np.array([5, 6]), np.array([7, 8])]]
+    l2 = [[np.array([1, 2]), np.array([3, 4])],
+          [np.array([1, 2, 3]), np.array([3, 4, 5])]]
+
+    are_equal = compare_methods.compare_list_of_lists_by_comparing_sets(l1, l2)
+
+    assert are_equal is False
+
+
+def test_compare_list_of_lists_by_comparing_sets_three():
+    # Different lists in the lists
+
+    l1 = [[np.array([1, 2]), np.array([3, 4])]]
+    l2 = [[np.array([1, 2]), np.array([4, 3])]]
+
+    are_equal = compare_methods.compare_list_of_lists_by_comparing_sets(l1, l2)
+
+    assert are_equal is False
+
+
+def test_compare_list_of_lists_by_comparing_sets_four():
+    # The lists of lists are equal
+
+    l1 = [[np.array([1, 2]), np.array([3, 4])],
+          [np.array([5, 6]), np.array([7, 8])]]
+    l2 = [[np.array([1, 2]), np.array([3, 4])],
+          [np.array([5, 6]), np.array([7, 8])]]
+
+    are_equal = compare_methods.compare_list_of_lists_by_comparing_sets(l1, l2)
 
     assert are_equal is True
