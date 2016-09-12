@@ -301,6 +301,7 @@ def map_2d_exterior_to_1d_interior(coords, cols):
 
 
 def combine_minima(local_minima, rows, cols):
+    # Obsolete method not used
     """
     Return the combined minima in the landscape as a list of arrays
     :param local_minima: 1D-array with indices of all minima
@@ -476,6 +477,7 @@ def get_watersheds_with_combined_minima(combined_minima, local_watersheds):
 
 
 def get_boundary_pairs_in_watersheds(watersheds, nx, ny):
+    # All boundary pairs at domain boundary removed
 
     nbrs = get_neighbor_indices(ny, nx)
     domain_bnd_nodes = get_domain_boundary_indices(nx, ny)
@@ -503,6 +505,38 @@ def get_boundary_pairs_in_watersheds(watersheds, nx, ny):
     return boundary_pairs
 
 
+def get_all_boundary_pairs_in_watersheds(watersheds, nx, ny):
+    """
+    Returns a list of lists where each list contains two arrays with pairs, one in the watershed,
+    the other outside, either at the boundary or in another watershed
+    :param watersheds: List of arrays, each array containing indices of a watershed
+    :param nx: Number of cols
+    :param ny: Number of rows
+    :return boundary_pairs: All boundary pairs for each watershed
+    """
+
+    nbrs = get_neighbor_indices(ny, nx)
+
+    boundary_pairs = []
+
+    for watershed in watersheds:
+
+        watershed = np.sort(watershed)
+        nbrs_for_ws = nbrs[watershed]
+        nbrs_for_ws_1d = np.concatenate(nbrs_for_ws)
+
+        valid_nodes = np.in1d(nbrs_for_ws_1d, watershed, invert=True)
+
+        # Pairs in from-to format
+        repeat_from = np.repeat(watershed, 8)
+        from_indices = repeat_from[valid_nodes]
+        to_indices = nbrs_for_ws_1d[valid_nodes]
+        boundary_pairs_for_ws = [from_indices, to_indices]
+        boundary_pairs.append(boundary_pairs_for_ws)
+
+    return boundary_pairs
+
+
 def get_possible_spill_pairs(heights, boundary_pairs):
     """
     Returns a list of lists where each list contains the possible spill pairs from one watershed to another
@@ -513,8 +547,8 @@ def get_possible_spill_pairs(heights, boundary_pairs):
 
     rows, cols = np.shape(heights)
     heights = np.reshape(heights, rows * cols)
-
     heights_pairs = [heights[np.vstack((arr[0], arr[1]))] for arr in boundary_pairs]
+
     # Max elevation of each pair, get min of that
     min_of_max = [np.min(np.max(heights_pairs[i], axis=0)) for i in range(len(heights_pairs))]
 
@@ -524,7 +558,56 @@ def get_possible_spill_pairs(heights, boundary_pairs):
 
     spill_points = [[boundary_pairs[i][0][indices[i]], boundary_pairs[i][1][indices[i]]] for i in range(len(indices))]
 
-    return spill_points
+    return min_of_max, spill_points
 
 
-def 
+def get_steepest_spill_pair(heights, spill_pairs):
+    """
+    Return a list of tuples where each tuple is the spill pair for each watershed
+    :param heights: Heights of terrain
+    :param spill_pairs: List of lists. Each list contains two arrays in from-to format
+    :return steepest_spill_pairs: List of tuples containing the spill path
+    """
+
+    rows, cols = np.shape(heights)
+    heights = np.reshape(heights, rows * cols)
+    steepest_spill_pairs = [None] * len(spill_pairs)
+
+    for i in range(len(spill_pairs)):
+        if len(spill_pairs[i][0]) == 1:
+            steepest_spill_pairs[i] = (spill_pairs[i][0], spill_pairs[i][1])
+        else:
+            diff = abs(spill_pairs[i][0] - spill_pairs[i][1])
+            derivatives = np.array([None] * len(spill_pairs[i][0]), dtype=object)
+
+            card_indices = np.where(np.logical_or(diff == 1, diff == cols + 1))[0]
+            diag_indices = np.setdiff1d(np.arange(0, len(spill_pairs[i][0]), 1), card_indices)
+            card_der = (heights[spill_pairs[i][0][card_indices]] - heights[spill_pairs[i][1][card_indices]])/10
+            diag_der = (heights[spill_pairs[i][0][diag_indices]] - heights[spill_pairs[i][1][diag_indices]])/math.sqrt(200)
+            derivatives[card_indices] = card_der
+            derivatives[diag_indices] = diag_der
+
+            max_index = np.argmax(derivatives)
+            steepest_spill_pairs[i] = (spill_pairs[i][0][max_index], spill_pairs[i][1][max_index])
+
+    return steepest_spill_pairs
+
+
+def map_nodes_to_watersheds(watersheds, rows, cols):
+
+    mapping_nodes_to_watersheds = np.empty(rows * cols, dtype=int)
+
+    for i in range(len(watersheds)):
+        mapping_nodes_to_watersheds[watersheds[i]] = i
+
+    domain_bnd_nodes = get_domain_boundary_indices(cols, rows)
+    mapping_nodes_to_watersheds[domain_bnd_nodes] = -1
+
+    return mapping_nodes_to_watersheds
+
+
+def merge_watersheds_flowing_into_each_other(watersheds, rows, cols):
+
+    map_node_to_ws = map_nodes_to_watersheds(watersheds, rows, cols)
+    DG = networkx.DiGraph()
+
