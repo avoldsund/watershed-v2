@@ -41,3 +41,25 @@ def compare_two_lists_of_arrays(l1, l2):
                 return False
 
     return True
+
+
+def compare_list_of_lists_by_comparing_sets(l1, l2):
+    """
+    List of lists as elements. The lists must have the same number of lists, and have the same pairs
+    when pairing the two arrays in each list.
+    Returns True if the lists have the same length and the same pairs.
+    :param l1: List of lists with two arrays 1.
+    :param l2: List of lists with two arrays 1.
+    :return: True if the lists are equal, False if not.
+    """
+
+    if len(l1) != len(l2):  # Check if the number of elements is equal
+        return False
+    else:
+        for i in range(len(l1)):  # Convert to sets, check if elements are equal
+            l1_set = set(zip(l1[i][0], l1[i][1]))
+            l2_set = set(zip(l2[i][0], l2[i][1]))
+            if l1_set != l2_set:
+                return False
+
+    return True

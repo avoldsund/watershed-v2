@@ -505,7 +505,29 @@ def test_get_watersheds_with_combined_minima():
     assert are_equal
 
 
-def test_get_boundary_pairs_in_watersheds():
+def test_get_boundary_pairs_in_watersheds_small():
+
+    num_of_cols = 7
+    num_of_rows = 7
+    watersheds = [np.array([8, 9, 15, 16, 22]),
+                  np.array([10, 11, 12, 17, 18, 19, 23, 24, 25, 26, 32, 33, 39, 40]),
+                  np.array([29, 30, 31, 36, 37, 38])]
+
+    result_boundary_nodes = [[np.array([9, 9, 16, 16, 16, 16, 15, 22, 22, 22]),
+                              np.array([10, 17, 10, 17, 23, 24, 23, 23, 29, 30])],
+                             [np.array([10, 10, 17, 17, 23, 23, 23, 23, 23, 23, 24, 24, 24, 25, 32, 32, 39, 39]),
+                              np.array([9, 16, 9, 16, 15, 16, 22, 29, 30, 31, 16, 30, 31, 31, 31, 38, 31, 38])],
+                             [np.array([29, 29, 30, 30, 30, 31, 31, 31, 31, 31, 38, 38]),
+                              np.array([22, 23, 22, 23, 24, 23, 24, 25, 32, 39, 32, 39])]]
+
+    boundary_nodes = util.get_boundary_pairs_in_watersheds(watersheds, num_of_cols, num_of_rows)
+
+    are_equal = compare_methods.compare_list_of_lists_by_comparing_sets(boundary_nodes, result_boundary_nodes)
+
+    assert are_equal
+
+
+def test_get_boundary_pairs_in_watersheds_large():
 
     num_of_cols = 9
     num_of_rows = 9
@@ -525,3 +547,27 @@ def test_get_boundary_pairs_in_watersheds():
     are_equal = compare_methods.compare_list_of_lists_by_comparing_sets(boundary_nodes, result_boundary_nodes)
 
     assert are_equal
+
+
+def test_get_possible_spill_pairs():
+
+    heights = np.array([[10, 10, 10, 10, 10, 10, 10],
+                        [10, 1, 8, 7, 7, 7, 10],
+                        [10, 6, 8, 5, 5, 5, 10],
+                        [10, 8, 8, 4, 2, 4, 10],
+                        [10, 9, 9, 3, 3, 3, 10],
+                        [10, 0, 1, 5, 5, 5, 10],
+                        [10, 10, 10, 10, 10, 10, 10]])
+    boundary_pairs = [[np.array([9, 9, 16, 16, 16, 16, 15, 22, 22, 22]),
+                       np.array([10, 17, 10, 17, 23, 24, 23, 23, 29, 30])],
+                      [np.array([10, 10, 17, 17, 23, 23, 23, 23, 23, 23, 24, 24, 24, 25, 32, 32, 39, 39]),
+                       np.array([9, 16, 9, 16, 15, 16, 22, 29, 30, 31, 16, 30, 31, 31, 31, 38, 31, 38])],
+                      [np.array([29, 29, 30, 30, 30, 31, 31, 31, 31, 31, 38, 38]),
+                       np.array([22, 23, 22, 23, 24, 23, 24, 25, 32, 39, 32, 39])]]
+
+    result_possible_spill_pairs = [[np.array([9, 9, 16, 16, 16, 16, 15, 22]), np.array([10, 17, 10, 17, 23, 24, 23, 23])],
+                                   [np.array([25, 32]), np.array([31, 31])],
+                                   [np.array([31, 31]), np.array([25, 32])]]
+    possible_spill_pairs = util.get_possible_spill_pairs(heights, boundary_pairs)
+
+    assert compare_methods.compare_list_of_lists_by_comparing_sets(result_possible_spill_pairs, possible_spill_pairs)

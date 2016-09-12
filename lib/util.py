@@ -502,3 +502,29 @@ def get_boundary_pairs_in_watersheds(watersheds, nx, ny):
 
     return boundary_pairs
 
+
+def get_possible_spill_pairs(heights, boundary_pairs):
+    """
+    Returns a list of lists where each list contains the possible spill pairs from one watershed to another
+    :param heights: Heights of terrain
+    :param boundary_pairs: Pairs between watershed boundaries
+    :return spill_pairs: Possible spill pairs
+    """
+
+    rows, cols = np.shape(heights)
+    heights = np.reshape(heights, rows * cols)
+
+    heights_pairs = [heights[np.vstack((arr[0], arr[1]))] for arr in boundary_pairs]
+    # Max elevation of each pair, get min of that
+    min_of_max = [np.min(np.max(heights_pairs[i], axis=0)) for i in range(len(heights_pairs))]
+
+    # If x -> y, both x and y have heights <= min_of_max
+    indices = [np.where(np.logical_and(heights_pairs[i][0] <= min_of_max[i], heights_pairs[i][1] <= min_of_max[i]))[0]
+               for i in range(len(heights_pairs))]
+
+    spill_points = [[boundary_pairs[i][0][indices[i]], boundary_pairs[i][1][indices[i]]] for i in range(len(indices))]
+
+    return spill_points
+
+
+def 
