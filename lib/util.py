@@ -301,7 +301,6 @@ def map_2d_exterior_to_1d_interior(coords, cols):
 
 
 def combine_minima(local_minima, rows, cols):
-    # Obsolete method not used
     """
     Return the combined minima in the landscape as a list of arrays
     :param local_minima: 1D-array with indices of all minima
@@ -574,40 +573,96 @@ def get_steepest_spill_pair(heights, spill_pairs):
     steepest_spill_pairs = [None] * len(spill_pairs)
 
     for i in range(len(spill_pairs)):
-        if len(spill_pairs[i][0]) == 1:
-            steepest_spill_pairs[i] = (spill_pairs[i][0], spill_pairs[i][1])
-        else:
-            diff = abs(spill_pairs[i][0] - spill_pairs[i][1])
-            derivatives = np.array([None] * len(spill_pairs[i][0]), dtype=object)
 
-            card_indices = np.where(np.logical_or(diff == 1, diff == cols + 1))[0]
-            diag_indices = np.setdiff1d(np.arange(0, len(spill_pairs[i][0]), 1), card_indices)
-            card_der = (heights[spill_pairs[i][0][card_indices]] - heights[spill_pairs[i][1][card_indices]])/10
-            diag_der = (heights[spill_pairs[i][0][diag_indices]] - heights[spill_pairs[i][1][diag_indices]])/math.sqrt(200)
-            derivatives[card_indices] = card_der
-            derivatives[diag_indices] = diag_der
+        diff = abs(spill_pairs[i][0] - spill_pairs[i][1])
+        derivatives = np.array([None] * len(spill_pairs[i][0]), dtype=object)
 
-            max_index = np.argmax(derivatives)
-            steepest_spill_pairs[i] = (spill_pairs[i][0][max_index], spill_pairs[i][1][max_index])
+        card_indices = np.where(np.logical_or(diff == 1, diff == cols + 1))[0]
+        diag_indices = np.setdiff1d(np.arange(0, len(spill_pairs[i][0]), 1), card_indices)
+        card_der = (heights[spill_pairs[i][0][card_indices]] - heights[spill_pairs[i][1][card_indices]])/10
+        diag_der = (heights[spill_pairs[i][0][diag_indices]] - heights[spill_pairs[i][1][diag_indices]])/math.sqrt(200)
+        derivatives[card_indices] = card_der
+        derivatives[diag_indices] = diag_der
+
+        max_index = np.argmax(derivatives)
+        steepest_spill_pairs[i] = (spill_pairs[i][0][max_index], spill_pairs[i][1][max_index])
 
     return steepest_spill_pairs
 
 
 def map_nodes_to_watersheds(watersheds, rows, cols):
 
-    mapping_nodes_to_watersheds = np.empty(rows * cols, dtype=int)
+    mapping_nodes_to_watersheds = np.ones(rows * cols, dtype=int) * -1
 
     for i in range(len(watersheds)):
         mapping_nodes_to_watersheds[watersheds[i]] = i
 
-    domain_bnd_nodes = get_domain_boundary_indices(cols, rows)
-    mapping_nodes_to_watersheds[domain_bnd_nodes] = -1
-
     return mapping_nodes_to_watersheds
 
 
-def merge_watersheds_flowing_into_each_other(watersheds, rows, cols):
+def merge_watersheds_flowing_into_each_other(watersheds, steepest_spill_pairs, rows, cols):
 
     map_node_to_ws = map_nodes_to_watersheds(watersheds, rows, cols)
     DG = networkx.DiGraph()
 
+    # print 'Watershed nr 30: ', watersheds[30]
+    # print 'Steepest spill pairs of 30: ', steepest_spill_pairs[30]
+    # from_ix = steepest_spill_pairs[30][0]
+    # to_ix = steepest_spill_pairs[30][1]
+    #
+    # print 'Watershed nr 0: ', watersheds[0]
+    # print 'Watershed spilling from: ', map_node_to_ws[from_ix], ' to: ', map_node_to_ws[to_ix]
+
+    for i in range(len(steepest_spill_pairs)):
+        ws_from = map_node_to_ws[steepest_spill_pairs[i][0]]
+        ws_to = map_node_to_ws[steepest_spill_pairs[i][1]]
+
+        #if ws_to == -1:
+        #    print 'Watershed: ', watersheds[ws_from]
+        #    print 'Its spill pair: ', (steepest_spill_pairs[i][0], steepest_spill_pairs[i][1])
+        #    #DG.add_node(ws_from)
+        #else:
+        DG.add_edge(ws_from, ws_to)
+
+    merge_list = sorted(networkx.simple_cycles(DG))
+    ws_being_merged = sorted([x for l in merge_list for x in l])
+    ws_not_being_merged = np.setdiff1d(np.arange(0, len(watersheds), 1), ws_being_merged)
+    print 'ws_being_merged: ', ws_being_merged
+    print 'merge_list: ', merge_list
+    #print watersheds[30], steepest_spill_pairs[30]
+    # Insert all merged watersheds into merged_watersheds
+    merged_watersheds = [np.concatenate((watersheds[el[0]], watersheds[el[1]]), axis=0) for el in merge_list]
+    # Add the watersheds not having been merged
+    not_merged_watersheds = [watersheds[el] for el in ws_not_being_merged]
+    #print 'Not merged watersheds: ', ws_not_being_merged
+    merged_watersheds.extend(not_merged_watersheds)
+    watersheds = merged_watersheds
+
+    return watersheds
+
+
+def merge_watersheds(watersheds, steepest, nx, ny):
+
+    mapping = map_nodes_to_watersheds(watersheds, ny, nx)
+
+    # Only spill_pairs going from a ws to another ws, no paths between ws and boundary
+    spill_pairs = [(mapping[steepest[i][0]], mapping[steepest[i][1]]) for i in range(len(steepest))
+                   if (mapping[steepest[i][0]] != -1 and mapping[steepest[i][1]] != -1)]
+
+    DG = networkx.DiGraph()
+    DG.add_edges_from(spill_pairs)
+
+    G = DG.to_undirected()
+    watershed_indices = sorted(networkx.connected_components(G))
+
+    ws_being_merged = sorted([x for l in watershed_indices for x in l])
+    ws_not_being_merged = np.setdiff1d(np.arange(0, len(watersheds), 1), ws_being_merged)
+
+    merged_watersheds = [np.concatenate([watersheds[el] for el in ws_set]) for ws_set in watershed_indices]
+
+    not_merged_watersheds = [watersheds[el] for el in ws_not_being_merged]
+    merged_watersheds.extend(not_merged_watersheds)
+
+    watersheds = merged_watersheds
+
+    return watersheds

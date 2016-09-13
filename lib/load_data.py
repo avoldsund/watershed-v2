@@ -99,3 +99,46 @@ def get_landscape_tyrifjorden(file_name):
     landscape.interior_ny -= 1
 
     return landscape
+
+
+def get_smaller_test_landscape(file_name):
+
+    data_set = load_ds(file_name)
+    heights = get_array_from_band(data_set)
+    heights = heights[0:-1, 1:]
+    heights = heights[0:500, 0:500]
+
+    landscape = Landscape(data_set)
+    landscape.heights = heights
+    landscape.nx = 500
+    landscape.ny = 500
+    landscape.x_min += landscape.step_size
+    landscape.y_min -= landscape.step_size * 3500
+    landscape.total_nodes = landscape.nx * landscape.ny
+    landscape.interior_heights = landscape.heights[1:-1, 1:-1]
+    landscape.interior_nx = landscape.nx - 2
+    landscape.interior_ny = landscape.ny - 2
+
+    return landscape
+
+
+def get_smallest_test_landscape(file_name):
+
+    size = 200
+    data_set = load_ds(file_name)
+    heights = get_array_from_band(data_set)
+    heights = heights[0:-1, 1:]
+    heights = heights[0:size, 0:size]
+
+    landscape = Landscape(data_set)
+    landscape.heights = heights
+    landscape.nx = size
+    landscape.ny = size
+    landscape.x_min += landscape.step_size
+    landscape.y_min -= landscape.step_size * (4000 - size)
+    landscape.total_nodes = landscape.nx * landscape.ny
+    landscape.interior_heights = landscape.heights[1:-1, 1:-1]
+    landscape.interior_nx = landscape.nx - 2
+    landscape.interior_ny = landscape.ny - 2
+
+    return landscape

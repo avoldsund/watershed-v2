@@ -587,11 +587,10 @@ def test_get_possible_spill_pairs():
                              [np.array([29, 29, 30, 30, 30, 31, 31, 31, 31, 31, 38, 38, 29, 29, 29, 36, 36, 36, 36, 36, 37, 37, 37, 38, 38, 38]),
                               np.array([22, 23, 22, 23, 24, 23, 24, 25, 32, 39, 32, 39, 21, 28, 35, 28, 35, 42, 43, 44, 43, 44, 45, 44, 45, 46])]]
 
-    # [[np.array([9, 9, 16, 16, 16, 16, 15, 22]), np.array([10, 17, 10, 17, 23, 24, 23, 23])],
     result_min_of_max = np.array([4, 3, 3])
     result_spill_pairs = [[np.array([8]), np.array([0])],
-                                   [np.array([25, 32]), np.array([31, 31])],
-                                   [np.array([31, 31]), np.array([25, 32])]]
+                          [np.array([25, 32]), np.array([31, 31])],
+                          [np.array([31, 31]), np.array([25, 32])]]
     min_of_max, spill_pairs = util.get_possible_spill_pairs(heights, boundary_pairs)
 
     assert compare_methods.compare_list_of_lists_by_comparing_sets(result_spill_pairs, spill_pairs) \
@@ -637,3 +636,84 @@ def test_map_nodes_to_watersheds():
 
 def test_merge_watersheds_flowing_into_each_other():
 
+    cols = 7
+    rows = 7
+    watersheds = [np.array([8, 9, 15, 16, 22]),
+                  np.array([10, 11, 12, 17, 18, 19, 23, 24, 25, 26, 32, 33, 39, 40]),
+                  np.array([29, 30, 31, 36, 37, 38])]
+    steepest_spill_pairs = [(8, 0), (32, 31), (31, 25)]
+
+    result_merged_watersheds = [np.array([10, 11, 12, 17, 18, 19, 23, 24, 25, 26,
+                                          32, 33, 39, 40, 29, 30, 31, 36, 37, 38]),
+                                np.array([8, 9, 15, 16, 22])]
+
+    merged_watersheds = util.merge_watersheds_flowing_into_each_other(watersheds, steepest_spill_pairs, rows, cols)
+
+    assert compare_methods.compare_two_lists_of_arrays(merged_watersheds, result_merged_watersheds)
+
+
+def test_merge_watersheds():
+
+    cols = 10
+    rows = 11
+    watersheds = [np.array([11, 12, 21, 22, 31, 32]),
+                  np.array([13, 14, 15, 23, 24, 25]),
+                  np.array([16, 17, 26, 27, 36, 37]),
+                  np.array([33, 34, 35]),
+                  np.array([18, 28, 38, 47, 48, 57, 58]),
+                  np.array([41, 51, 61, 62]),
+                  np.array([42, 43, 44, 45, 52, 53, 54, 55]),
+                  np.array([46, 56, 66, 67, 68]),
+                  np.array([63, 64, 65, 73, 74, 75, 83, 84, 85]),
+                  np.array([71, 72, 81, 82, 91, 92, 93]),
+                  np.array([76, 77, 78, 86, 87]),
+                  np.array([88, 94, 95, 96, 97, 98])]
+    steepest = [(32, 43), (25, 35), (27, 28), (35, 36), (57, 56), (51, 52), (54, 64), (67, 78),
+                (83, 93), (92, 102), (78, 79), (98, 87)]
+
+    result_merged_watersheds = [np.array([11, 12, 21, 22, 31, 32, 42, 43, 44, 45, 52, 53, 54, 55, 41, 51, 61, 62,
+                                          63, 64, 65, 73, 74, 75, 83, 84, 85, 71, 72, 81, 82, 91, 92, 93]),
+                                np.array([13, 14, 15, 23, 24, 25, 33, 34, 35, 16, 17, 26, 27, 36, 37, 18, 28, 38, 47,
+                                          48, 57, 58, 46, 56, 66, 67, 68, 76, 77, 78, 86, 87, 88, 94, 95, 96, 97, 98])]
+
+    merged_watersheds = util.merge_watersheds(watersheds, steepest, cols, rows)
+
+    for i in range(len(result_merged_watersheds)):
+        result_merged_watersheds[i] = np.sort(result_merged_watersheds[i])
+        merged_watersheds[i] = np.sort(merged_watersheds[i])
+
+    assert compare_methods.compare_two_lists_of_arrays(merged_watersheds, result_merged_watersheds)
+
+
+def test_merge_watersheds_modified():
+
+    cols = 10
+    rows = 11
+    watersheds = [np.array([11, 12, 21, 22, 31, 32]),
+                  np.array([13, 14, 15, 23, 24, 25]),
+                  np.array([16, 17, 26, 27, 36, 37]),
+                  np.array([33, 34, 35]),
+                  np.array([18, 28, 38, 47, 48, 57, 58]),
+                  np.array([41, 51, 61, 62]),
+                  np.array([42, 43, 44, 45, 52, 53, 54, 55]),
+                  np.array([46, 56, 66, 67, 68]),
+                  np.array([63, 64, 65, 73, 74, 75, 83, 84, 85]),
+                  np.array([71, 72, 81, 82, 91, 92, 93]),
+                  np.array([76, 77, 78, 86, 87]),
+                  np.array([88, 94, 95, 96, 97, 98])]
+    steepest = [(32, 43), (25, 35), (27, 28), (35, 36), (57, 56), (51, 52), (54, 64), (67, 78),
+                (83, 93), (92, 102), (78, 79), (98, 108)]
+
+    result_merged_watersheds = [np.array([11, 12, 21, 22, 31, 32, 42, 43, 44, 45, 52, 53, 54, 55, 41, 51, 61, 62,
+                                          63, 64, 65, 73, 74, 75, 83, 84, 85, 71, 72, 81, 82, 91, 92, 93]),
+                                np.array([13, 14, 15, 23, 24, 25, 33, 34, 35, 16, 17, 26, 27, 36, 37, 18, 28, 38, 47,
+                                          48, 57, 58, 46, 56, 66, 67, 68, 76, 77, 78, 86, 87]),
+                                np.array([88, 94, 95, 96, 97, 98])]
+
+    merged_watersheds = util.merge_watersheds(watersheds, steepest, cols, rows)
+
+    for i in range(len(result_merged_watersheds)):
+        result_merged_watersheds[i] = np.sort(result_merged_watersheds[i])
+        merged_watersheds[i] = np.sort(merged_watersheds[i])
+
+    assert compare_methods.compare_two_lists_of_arrays(merged_watersheds, result_merged_watersheds)

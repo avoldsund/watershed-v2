@@ -1,5 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
+from matplotlib.pyplot import cm
 from lib import util
 
 
@@ -52,10 +53,12 @@ def plot_watersheds_2d(watersheds, landscape, ds):
     large_watersheds.sort(key=len)
     nr_of_large_watersheds = len(large_watersheds)
 
-    color_list = ['red', 'green', 'blue', 'yellow']
-    color_list = iter(color_list * (nr_of_large_watersheds/3))
+    print 'nr of large watersheds: ', nr_of_large_watersheds
 
-    nr_of_largest_indigo = 10
+    color_list = ['red', 'green', 'blue', 'yellow']
+    color_list = iter(color_list * (nr_of_large_watersheds))
+
+    nr_of_largest_indigo = 1
 
     for i in range(0, nr_of_large_watersheds - nr_of_largest_indigo):
         row_col = util.map_1d_to_2d(large_watersheds[i], landscape.interior_nx)
@@ -64,7 +67,6 @@ def plot_watersheds_2d(watersheds, landscape, ds):
                     color=next(color_list), s=30, lw=0, alpha=0.7)
 
     for i in range(nr_of_large_watersheds - nr_of_largest_indigo, nr_of_large_watersheds):
-        print len(large_watersheds[i])
         row_col = util.map_1d_to_2d(large_watersheds[i], landscape.interior_nx)
         plt.scatter(landscape.x_min + row_col[1][0::ds] * landscape.step_size,
                     landscape.y_max - row_col[0][0::ds] * landscape.step_size,
@@ -76,6 +78,39 @@ def plot_watersheds_2d(watersheds, landscape, ds):
         plt.title('All watersheds in the landscape')
     else:
         plt.title('All watersheds with over %s nodes in the landscape'%str(ws_above_n_nodes))
+    plt.xlabel('x')
+    plt.ylabel('y')
+
+    plt.show()
+
+
+def plot_few_watersheds_2d(watersheds, landscape, ds):
+
+    # Construct the (x, y)-coordinate system
+    x_grid = np.linspace(landscape.x_min, landscape.x_max, landscape.interior_nx)
+    y_grid = np.linspace(landscape.y_max, landscape.y_min, landscape.interior_ny)
+    x, y = np.meshgrid(x_grid[0::ds], y_grid[0::ds])
+
+    #color_list = ['red', 'green', 'blue', 'yellow']
+
+    #color_list = iter(color_list * (len(watersheds)/3))
+
+
+    color = iter(cm.rainbow(np.linspace(0, 1, len(watersheds))))
+
+    for i in range(len(watersheds)):
+        if i == 3:
+            row_col = util.map_1d_to_2d(watersheds[i], landscape.interior_nx)
+            plt.scatter(landscape.x_min + row_col[1][0::ds] * landscape.step_size,
+                        landscape.y_max - row_col[0][0::ds] * landscape.step_size,
+                        color='pink', s=30, lw=0, alpha=0.7)
+            print watersheds[i]
+        else:
+            row_col = util.map_1d_to_2d(watersheds[i], landscape.interior_nx)
+            plt.scatter(landscape.x_min + row_col[1][0::ds] * landscape.step_size,
+                        landscape.y_max - row_col[0][0::ds] * landscape.step_size,
+                        color=next(color), s=30, lw=0, alpha=0.7)
+
     plt.xlabel('x')
     plt.ylabel('y')
 
