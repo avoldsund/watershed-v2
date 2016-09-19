@@ -63,3 +63,48 @@ def compare_list_of_lists_by_comparing_sets(l1, l2):
                 return False
 
     return True
+
+
+def compare_watersheds(w1, w2):
+
+    if len(w1) != len(w2):  # Different number of watersheds
+        return False
+    else:
+        w1_set = [set(el) for el in w1]
+        w2_set = [set(el) for el in w2]
+        for i in range(len(w2)):
+            if w2_set[i] not in w1_set:
+                return False
+
+    return True
+
+
+def compare_coordinates(c1, c2):
+
+    if len(c1[0]) != len(c1[1]) or len(c2[0]) != len(c2[1]):
+        return False
+
+    c1_set = set(zip(c1[0], c1[1]))
+    c2_set = set(zip(c2[0], c2[1]))
+
+    if c1_set == c2_set:
+        return True
+    else:
+        return False
+
+
+def compare_minima_watersheds(d1, d2):
+
+    if len(d1) != len(d2):
+        return False
+
+    for min_index in sorted(d1):
+        if min_index in d2:
+            ws_1 = np.sort(d1[min_index])
+            ws_2 = np.sort(d2[min_index])
+        else:
+            return False
+        if not np.array_equal(ws_1, ws_2):
+            return False
+
+    return True

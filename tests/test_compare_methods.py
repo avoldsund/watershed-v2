@@ -148,3 +148,146 @@ def test_compare_list_of_lists_by_comparing_sets_four():
     are_equal = compare_methods.compare_list_of_lists_by_comparing_sets(l1, l2)
 
     assert are_equal is True
+
+
+def test_compare_watersheds_one():
+    # Not the same amount of watersheds
+
+    w1 = [np.array([0, 1]), np.array([2, 3])]
+    w2 = [np.array([0, 1])]
+
+    are_equal = compare_methods.compare_watersheds(w1, w2)
+
+    assert are_equal is False
+
+
+def test_compare_watersheds_two():
+    # Different order
+
+    w1 = [np.array([0, 1]), np.array([2, 3])]
+    w2 = [np.array([2, 3]), np.array([0, 1])]
+
+    are_equal = compare_methods.compare_watersheds(w1, w2)
+
+    assert are_equal is True
+
+
+def test_compare_watersheds_three():
+    # Different elements in the watersheds
+
+    w1 = [np.array([0, 1]), np.array([3, 4])]
+    w2 = [np.array([0, 1]), np.array([2, 3])]
+
+    are_equal = compare_methods.compare_watersheds(w1, w2)
+
+    assert are_equal is False
+
+
+def test_compare_watersheds_four():
+    # Different sizes of the watersheds
+
+    w1 = [np.array([0, 1]), np.array([3, 4])]
+    w2 = [np.array([0, 1]), np.array([3, 4, 5])]
+
+    are_equal = compare_methods.compare_watersheds(w1, w2)
+
+    assert are_equal is False
+
+
+def test_compare_watersheds_five():
+    # Watersheds are equal
+
+    w1 = [np.array([0, 1]), np.array([2, 3])]
+    w2 = [np.array([0, 1]), np.array([2, 3])]
+
+    are_equal = compare_methods.compare_watersheds(w1, w2)
+
+    assert are_equal is True
+
+
+def test_compare_coordinates_one():
+    # Different number of coords
+
+    c1 = (np.array([0, 1]), np.array([2, 3]))
+    c2 = (np.array([0, 1, 2]), np.array([2, 3, 4]))
+
+    are_equal = compare_methods.compare_coordinates(c1, c2)
+
+    assert are_equal is False
+
+
+def test_compare_coordinates_two():
+    # Different ordering of coordinates
+
+    c1 = (np.array([0, 1]), np.array([2, 3]))
+    c2 = (np.array([1, 0]), np.array([3, 2]))
+
+    are_equal = compare_methods.compare_coordinates(c1, c2)
+
+    assert are_equal is True
+
+
+def test_compare_coordinates_three():
+    # Different lengths of one of the arrays
+
+    c1 = (np.array([0, 1]), np.array([2, 3]))
+    c2 = (np.array([0, 1, 2]), np.array([2, 3]))
+
+    are_equal = compare_methods.compare_coordinates(c1, c2)
+
+    assert are_equal is False
+
+
+def test_compare_coordinates_four():
+    # Coordinates are identical
+
+    c1 = (np.array([0, 1]), np.array([2, 3]))
+    c2 = (np.array([0, 1]), np.array([2, 3]))
+
+    are_equal = compare_methods.compare_coordinates(c1, c2)
+
+    assert are_equal is True
+
+
+def test_compare_minima_watersheds_one():
+    # Different amounts of minima
+
+    d1 = {0: np.array([0, 1, 2])}
+    d2 = {0: np.array([0, 1, 2]), 1: np.array([3, 4, 5])}
+
+    are_equal = compare_methods.compare_minima_watersheds(d1, d2)
+
+    assert are_equal is False
+
+
+def test_compare_minima_watersheds_two():
+    # Different nodes
+
+    d1 = {0: np.array([0, 1, 2])}
+    d2 = {0: np.array([3, 4, 5])}
+
+    are_equal = compare_methods.compare_minima_watersheds(d1, d2)
+
+    assert are_equal is False
+
+
+def test_compare_minima_watersheds_three():
+    # Same nodes, different minimum
+
+    d1 = {0: np.array([0, 1, 2])}
+    d2 = {1: np.array([0, 1, 2])}
+
+    are_equal = compare_methods.compare_minima_watersheds(d1, d2)
+
+    assert are_equal is False
+
+
+def test_compare_minima_watersheds_four():
+    # They are equal
+
+    d1 = {0: np.array([0, 1, 2]), 1: np.array([3, 4, 5])}
+    d2 = {0: np.array([0, 1, 2]), 1: np.array([3, 4, 5])}
+
+    are_equal = compare_methods.compare_minima_watersheds(d1, d2)
+
+    assert are_equal is True
