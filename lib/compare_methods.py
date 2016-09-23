@@ -108,3 +108,15 @@ def compare_minima_watersheds(d1, d2):
             return False
 
     return True
+
+
+def compare_boundary_pairs(b1, b2):
+
+    if len(b1) != len(b2):  # Boundary pairs for diff number of watersheds
+        return False
+
+    for i in range(len(b1)):
+        b1_set = set(zip(b1[i][0], b1[i][1]))
+        b2_set = set(zip(b2[i][0], b2[i][1]))
+        if b1_set != b2_set:
+            return False

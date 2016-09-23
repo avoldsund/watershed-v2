@@ -499,20 +499,25 @@ def test_get_boundary_pairs_for_specific_watersheds():
 
     nx = 10
 
-    merged_watersheds = [np.array([33, 34, 35]),
+    merged_watersheds = [np.array([35, 33, 34]),
                          np.array([63, 64, 65, 73, 74, 75, 83, 84, 85]),
-                         np.array([18, 28, 38, 47, 48, 57, 58])]
+                         np.array([38, 47, 48, 57, 58, 18, 28]),
+                         np.array([11, 12, 21, 22, 31, 32])]
 
     result_boundary_pairs = [[np.array([33, 33, 33, 33, 33, 33, 33, 34, 34, 34, 34, 34, 34, 35, 35, 35, 35, 35, 35, 35]),
                               np.array([24, 44, 43, 42, 32, 22, 23, 25, 45, 44, 43, 23, 24, 26, 36, 46, 45, 44, 24, 25])],
-                             [np.array([63, 63, 63, 63, 63, 64, 64, 64, 65, 65, 65, 65, 65, 73, 73, 73, 75, 75, 75, 83,
-                                        83, 83, 83, 83, 84, 84, 84, 85, 85, 85, 85, 85]),
-                              np.array([54, 53, 52, 62, 72, 53, 54, 55, 54, 55, 56, 66, 76, 62, 72, 82, 66, 76, 86, 72,
-                                        82, 92, 93, 94, 93, 94, 95, 94, 95, 96, 76, 86])],
+                             [np.array([85, 85, 85, 85, 85, 63, 63, 63, 63, 63, 64, 64, 64, 65, 65, 65, 65, 65, 73, 73, 73, 75, 75, 75, 83,
+                                        83, 83, 83, 83, 84, 84, 84]),
+                              np.array([94, 95, 96, 76, 86, 54, 53, 52, 62, 72, 53, 54, 55, 54, 55, 56, 66, 76, 62, 72, 82, 66, 76, 86, 72,
+                                        82, 92, 93, 94, 93, 94, 95])],
                              [np.array([18, 18, 18, 18, 18, 18, 18, 28, 28, 28, 28, 28, 28, 38, 38, 38, 38, 38, 47, 47,
                                         47, 47, 48, 48, 48, 48, 57, 57, 57, 57, 57, 58, 58, 58, 58, 58]),
                               np.array([7, 8, 9, 17, 19, 27, 29, 17, 19, 27, 29, 37, 39, 27, 29, 37, 39, 49, 36, 37, 46,
-                                        56, 37, 39, 49, 59, 46, 56, 66, 67, 68, 49, 59, 67, 68, 69])]]
+                                        56, 37, 39, 49, 59, 46, 56, 66, 67, 68, 49, 59, 67, 68, 69])],
+                             [np.array([11, 11, 11, 11, 11, 12, 12, 12, 12, 12, 21, 21, 21, 22, 22, 22, 31, 31,
+                                        31, 31, 31, 32, 32, 32, 32, 32]),
+                              np.array([0, 1, 2, 10, 20, 1, 2, 3, 13, 23, 10, 20, 30, 13, 23, 33, 20, 30, 40,
+                                        41, 42, 23, 33, 41, 42, 43])]]
 
     boundary_pairs = util.get_boundary_pairs_for_specific_watersheds(merged_watersheds, nx)
 
@@ -565,32 +570,6 @@ def test_get_steepest_spill_pair():
     assert steepest_spill_pairs == result_steepest_spill_pairs
 
 
-# def test_get_steepest_spill_pair_loops():
-#
-#     heights = np.array([[4, 4, 4, 4, 4, 4, 4, 4],
-#                         [4, 3, 3, 3, 3, 3, 3, 4],
-#                         [4, 3, 0, 2, 2, 0, 3, 4],
-#                         [4, 3, 2, 2, 2, 2, 3, 4],
-#                         [4, 3, 2, 2, 2, 1, 3, 4],
-#                         [4, 3, 0, 0, 0, 0, 3, 4],
-#                         [4, 3, 3, 3, 3, 3, 3, 3],
-#                         [4, 4, 4, 4, 4, 4, 4, 4]])
-#     spill_pairs = [[np.array([19, 19, 26, 26, 27, 27, 27, 27, 27]),
-#                     np.array([20, 28, 34, 35, 20, 28, 34, 35, 36])],
-#                    [np.array([20, 20, 29, 29, 28, 28, 28, 28, 28]),
-#                     np.array([19, 27, 36, 37, 19, 27, 35, 36, 37])],
-#                    [np.array([34, 34, 35, 35, 35, 36, 36, 36, 37, 37]),
-#                     np.array([26, 27, 26, 27, 28, 27, 28, 29, 28, 29])]]
-#
-#     result_steepest_spill_pairs = []
-#
-#     steepest_spill_pairs = util.get_steepest_spill_pair(heights, spill_pairs)
-#
-#     print steepest_spill_pairs
-#
-#     assert steepest_spill_pairs == result_steepest_spill_pairs
-
-
 def test_remove_cycles():
 
     rows = 8
@@ -607,12 +586,11 @@ def test_remove_cycles():
                                    49, 50, 51, 52, 53, 54])]
     result_steepest_spill_pairs = [(54, 55)]
 
-    new_watersheds, new_steepest_spill_pairs = util.remove_cycles(watersheds, steepest_spill_pairs, rows, cols)
+    merged_watersheds, removed_spill_pairs, merged_indices = util.remove_cycles(watersheds, steepest_spill_pairs, rows, cols)
 
-    are_equal = compare_methods.compare_watersheds(new_watersheds, result_watersheds)
-    pairs_equal = new_steepest_spill_pairs == result_steepest_spill_pairs
+    are_equal = compare_methods.compare_watersheds(merged_watersheds, result_watersheds)
 
-    assert are_equal and pairs_equal
+    assert are_equal
 
 
 def test_remove_cycles_advanced():
@@ -630,12 +608,14 @@ def test_remove_cycles_advanced():
     steepest_spill_pairs = [(10, 11), (12, 20), (18, 26), (25, 17),
                             (27, 34), (22, 30), (38, 37), (29, 21)]
 
-    result_watersheds = [np.array([9, 10, 17, 11, 12, 18, 19, 20, 28, 27, 35, 25, 26, 33, 34]),
+    result_watersheds = [np.array([9, 10, 17, 11, 12, 18, 19, 20, 28, 25, 26, 33, 34]),
                          np.array([13, 14, 21, 22, 29, 36, 37, 30, 38])]
 
-    new_watersheds = util.remove_cycles(watersheds, steepest_spill_pairs, rows, cols)
+    # Notice that the watershed [27, 35] is not in merged_watersheds as it was not in the cycle,
+    # just spilling to a cycle. The merged watersheds are the watersheds that was part of a cycle
+    merged_watersheds, removed_spill_pairs, merged_indices = util.remove_cycles(watersheds, steepest_spill_pairs, rows, cols)
 
-    assert compare_methods.compare_watersheds(new_watersheds, result_watersheds)
+    assert compare_methods.compare_watersheds(merged_watersheds, result_watersheds)
 
 
 def test_map_nodes_to_watersheds():

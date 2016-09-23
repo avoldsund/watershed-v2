@@ -36,9 +36,9 @@ def plot_landscape_2d(landscape, ds):
 def plot_watersheds_2d(watersheds, landscape, ds):
 
     # Construct the (x, y)-coordinate system
-    x_grid = np.linspace(landscape.x_min, landscape.x_max, landscape.interior_nx)
-    y_grid = np.linspace(landscape.y_max, landscape.y_min, landscape.interior_ny)
-    x, y = np.meshgrid(x_grid[0::ds], y_grid[0::ds])
+    # x_grid = np.linspace(landscape.x_min, landscape.x_max, landscape.interior_nx)
+    # y_grid = np.linspace(landscape.y_max, landscape.y_min, landscape.interior_ny)
+    # x, y = np.meshgrid(x_grid[0::ds], y_grid[0::ds])
     # z = landscape.interior_heights[0::ds, 0::ds]
     #
     # # Plotting the terrain in the background
@@ -48,29 +48,34 @@ def plot_watersheds_2d(watersheds, landscape, ds):
     # plt.colorbar(label='Height', spacing='uniform')
 
     # Only plot the n largest watersheds
-    ws_above_n_nodes = 100
+    ws_above_n_nodes = 1
     large_watersheds = [ws for ws in watersheds if len(ws) > ws_above_n_nodes]
     large_watersheds.sort(key=len)
     nr_of_large_watersheds = len(large_watersheds)
 
     print 'nr of large watersheds: ', nr_of_large_watersheds
 
-    color_list = ['red', 'green', 'blue', 'yellow']
-    color_list = iter(color_list * (nr_of_large_watersheds))
+    color_small = ['red', 'green', 'blue', 'yellow']
+    color_small = iter(color_small * (len(watersheds)/3))
+    #color_small = iter(cm.flag(np.linspace(0, 1, len(watersheds))))
+    #color_list = iter(cm.rainbow(np.linspace(0, 1, len(watersheds))))
 
-    nr_of_largest_indigo = 1
+    nr_of_largest = 5
 
-    for i in range(0, nr_of_large_watersheds - nr_of_largest_indigo):
-        row_col = util.map_1d_to_2d(large_watersheds[i], landscape.interior_nx)
+    for i in range(0, nr_of_large_watersheds - nr_of_largest):
+        row_col = util.map_1d_to_2d(large_watersheds[i], landscape.nx)
         plt.scatter(landscape.x_min + row_col[1][0::ds] * landscape.step_size,
                     landscape.y_max - row_col[0][0::ds] * landscape.step_size,
-                    color=next(color_list), s=30, lw=0, alpha=0.7)
+                    color=next(color_small), s=10, lw=0, alpha=1)
 
-    for i in range(nr_of_large_watersheds - nr_of_largest_indigo, nr_of_large_watersheds):
-        row_col = util.map_1d_to_2d(large_watersheds[i], landscape.interior_nx)
+    color_large = ['gold', 'darkgreen', 'darkorange', 'darkorchid', 'dodgerblue']
+    color_large = iter(color_large * (len(watersheds)/3))
+
+    for i in range(nr_of_large_watersheds - nr_of_largest, nr_of_large_watersheds):
+        row_col = util.map_1d_to_2d(large_watersheds[i], landscape.nx)
         plt.scatter(landscape.x_min + row_col[1][0::ds] * landscape.step_size,
                     landscape.y_max - row_col[0][0::ds] * landscape.step_size,
-                    color='indigo', s=30, lw=0, alpha=0.7)
+                    color=next(color_large), s=10, lw=0, alpha=1)
 
     #plt.rcParams.update({'font.size': 14})
 
@@ -86,29 +91,46 @@ def plot_watersheds_2d(watersheds, landscape, ds):
 
 def plot_few_watersheds_2d(watersheds, landscape, ds):
 
-    # Construct the (x, y)-coordinate system
-    x_grid = np.linspace(landscape.x_min, landscape.x_max, landscape.interior_nx)
-    y_grid = np.linspace(landscape.y_max, landscape.y_min, landscape.interior_ny)
-    x, y = np.meshgrid(x_grid[0::ds], y_grid[0::ds])
-
-    #color_list = ['red', 'green', 'blue', 'yellow']
+    #color_list = ['red', 'green', 'blue', 'yellow', 'black', 'brown']
 
     #color_list = iter(color_list * (len(watersheds)/3))
-
 
     color = iter(cm.rainbow(np.linspace(0, 1, len(watersheds))))
 
     for i in range(len(watersheds)):
-        if i == 3:
-            row_col = util.map_1d_to_2d(watersheds[i], landscape.interior_nx)
+        if i == 4:
+            row_col = util.map_1d_to_2d(watersheds[i], landscape.nx)
             plt.scatter(landscape.x_min + row_col[1][0::ds] * landscape.step_size,
                         landscape.y_max - row_col[0][0::ds] * landscape.step_size,
-                        color='pink', s=30, lw=0, alpha=0.7)
-            print watersheds[i]
+                        color='gold', s=30, lw=0, alpha=0.7)
         else:
-            row_col = util.map_1d_to_2d(watersheds[i], landscape.interior_nx)
+            row_col = util.map_1d_to_2d(watersheds[i], landscape.nx)
             plt.scatter(landscape.x_min + row_col[1][0::ds] * landscape.step_size,
                         landscape.y_max - row_col[0][0::ds] * landscape.step_size,
+                        color=next(color), s=30, lw=0, alpha=0.7)
+
+    plt.xlabel('x')
+    plt.ylabel('y')
+
+    plt.show()
+
+
+def plot_few_watersheds_no_coords_2d(watersheds, landscape, ds):
+
+    #color_list = ['red', 'green', 'blue', 'yellow', 'black', 'brown']
+
+    #color_list = iter(color_list * (len(watersheds)/3))
+
+    color = iter(cm.rainbow(np.linspace(0, 1, len(watersheds))))
+
+    for i in range(len(watersheds)):
+        if i == 4:
+            row_col = util.map_1d_to_2d(watersheds[i], landscape.nx)
+            plt.scatter(row_col[1][0::ds], row_col[0][0::ds],
+                        color='gold', s=30, lw=0, alpha=0.7)
+        else:
+            row_col = util.map_1d_to_2d(watersheds[i], landscape.nx)
+            plt.scatter(row_col[1][0::ds], row_col[0][0::ds],
                         color=next(color), s=30, lw=0, alpha=0.7)
 
     plt.xlabel('x')
@@ -161,5 +183,70 @@ def plot_local_minima(minima, landscape):
     plt.tick_params(labelbottom='on', labeltop='off')
 
     plt.title('Minima in the landscape')
+
+    plt.show()
+
+
+def plot_upslope_watersheds(watersheds, upslope_indices, w_nr, landscape, ds=1):
+
+    nr_of_watersheds = len(watersheds)
+
+    color_small = ['red', 'green', 'blue', 'yellow']
+    color_small = iter(color_small * (nr_of_watersheds/3))
+
+    for i in range(0, nr_of_watersheds):
+        if i == w_nr:
+            row_col = util.map_1d_to_2d(watersheds[i], landscape.nx)
+            plt.scatter(landscape.x_min + row_col[1][0::ds] * landscape.step_size,
+                        landscape.y_max - row_col[0][0::ds] * landscape.step_size,
+                        color='gold', s=10, lw=0, alpha=1)
+        elif i in upslope_indices:
+            row_col = util.map_1d_to_2d(watersheds[i], landscape.nx)
+            plt.scatter(landscape.x_min + row_col[1][0::ds] * landscape.step_size,
+                        landscape.y_max - row_col[0][0::ds] * landscape.step_size,
+                        color='dodgerblue', s=10, lw=0, alpha=1)
+        else:
+            row_col = util.map_1d_to_2d(watersheds[i], landscape.nx)
+            plt.scatter(landscape.x_min + row_col[1][0::ds] * landscape.step_size,
+                        landscape.y_max - row_col[0][0::ds] * landscape.step_size,
+                        color=next(color_small), s=10, lw=0, alpha=1)
+
+    plt.xlabel('x')
+    plt.ylabel('y')
+
+    plt.show()
+
+
+def plot_up_and_downslope_watersheds(watersheds, upslope_indices, downslope_indices, w_nr, landscape, ds=4):
+
+    nr_of_watersheds = len(watersheds)
+
+    color_small = ['red', 'green', 'blue', 'yellow']
+    color_small = iter(color_small * (nr_of_watersheds/3))
+
+    for i in range(0, nr_of_watersheds):
+        if i == w_nr:
+            row_col = util.map_1d_to_2d(watersheds[i], landscape.nx)
+            plt.scatter(landscape.x_min + row_col[1][0::ds] * landscape.step_size,
+                        landscape.y_max - row_col[0][0::ds] * landscape.step_size,
+                        color='gold', s=10, lw=0, alpha=1)
+        elif i in upslope_indices:
+            row_col = util.map_1d_to_2d(watersheds[i], landscape.nx)
+            plt.scatter(landscape.x_min + row_col[1][0::ds] * landscape.step_size,
+                        landscape.y_max - row_col[0][0::ds] * landscape.step_size,
+                        color='dodgerblue', s=10, lw=0, alpha=1)
+        elif i in downslope_indices:
+            row_col = util.map_1d_to_2d(watersheds[i], landscape.nx)
+            plt.scatter(landscape.x_min + row_col[1][0::ds] * landscape.step_size,
+                        landscape.y_max - row_col[0][0::ds] * landscape.step_size,
+                        color='darkorchid', s=10, lw=0, alpha=1)
+        else:
+            row_col = util.map_1d_to_2d(watersheds[i], landscape.nx)
+            plt.scatter(landscape.x_min + row_col[1][0::ds] * landscape.step_size,
+                        landscape.y_max - row_col[0][0::ds] * landscape.step_size,
+                        color=next(color_small), s=10, lw=0, alpha=1)
+
+    plt.xlabel('x')
+    plt.ylabel('y')
 
     plt.show()

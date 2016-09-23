@@ -8,6 +8,16 @@ import matplotlib.pyplot as plt
 from operator import itemgetter
 
 
+def get_watershed_nr_by_rc(watersheds, landscape, r, c):
+    # Simple help method
+
+    mapping = map_nodes_to_watersheds(watersheds, landscape.ny, landscape.nx)
+    ix = map_2d_to_1d((r, c), landscape.nx)
+    w_nr = mapping[ix]
+
+    return w_nr
+
+
 def fill_single_cell_depressions(heights, rows, cols):
     """
     Preprocessing to reduce local minima in the terrain.
@@ -552,7 +562,6 @@ def get_boundary_pairs_for_specific_watersheds(specific_watersheds, nx):
     for watershed in specific_watersheds:
 
         nbrs = get_neighbor_indices(watershed, nx)
-        watershed = np.sort(watershed)
         nbrs_for_ws_1d = np.concatenate(nbrs)
         valid_nodes = np.in1d(nbrs_for_ws_1d, watershed, invert=True)
 
@@ -572,6 +581,7 @@ def get_possible_spill_pairs(heights, boundary_pairs):
     :param heights: Heights of terrain
     :param boundary_pairs: Pairs between watershed boundaries
     :return spill_pairs: Possible spill pairs
+    :return spill_height: Height of point where it will pour out
     """
 
     rows, cols = np.shape(heights)
@@ -585,9 +595,11 @@ def get_possible_spill_pairs(heights, boundary_pairs):
     indices = [np.where(np.logical_and(heights_pairs[i][0] <= min_of_max[i], heights_pairs[i][1] <= min_of_max[i]))[0]
                for i in range(len(heights_pairs))]
 
-    spill_points = [[boundary_pairs[i][0][indices[i]], boundary_pairs[i][1][indices[i]]] for i in range(len(indices))]
+    spill_pairs = [[boundary_pairs[i][0][indices[i]], boundary_pairs[i][1][indices[i]]] for i in range(len(indices))]
 
-    return min_of_max, spill_points
+    spill_height = min_of_max
+
+    return spill_height, spill_pairs
 
 
 def get_steepest_spill_pair(heights, spill_pairs):
@@ -688,25 +700,25 @@ def combine_watersheds_spilling_into_each_other(watersheds, heights):
 
         # Find spill pairs for given watersheds
         boundary_pairs = get_boundary_pairs_for_specific_watersheds(merged_watersheds, nx)
-        min_of_max, spill_pairs = get_possible_spill_pairs(heights, boundary_pairs)
+        spill_height, spill_pairs = get_possible_spill_pairs(heights, boundary_pairs)
         steepest_spill_pairs = get_steepest_spill_pair(heights, spill_pairs)
 
         # Add the new spill pairs to the unaltered ones
         steepest_spill_pairs = steepest_spill_pairs.union(remaining_spill_pairs)
 
-        # Merge watersheds
+        # Merge watersheds spilling into each other
         merged_watersheds, removed_spill_pairs, merged_indices = merge_watersheds_flowing_into_each_other(
             watersheds, steepest_spill_pairs, ny, nx)
         remaining_spill_pairs = steepest_spill_pairs.difference(removed_spill_pairs)
 
-        # Remove the watersheds being merged in watersheds, and add the new ones to the end
+        # Remove the merged watersheds from watersheds. Add the new ones to the end
         watersheds = [watersheds[i] for i in range(len(watersheds)) if i not in merged_indices]
         watersheds.extend(merged_watersheds)
 
         it += 1
         if len(merged_watersheds) == 0:  # Remove cycles at last iteration
-            merged_watersheds, removed_spill_pairs, merged_indices = remove_cycles(watersheds, steepest_spill_pairs,
-                                                                                   ny, nx)
+            merged_watersheds, removed_spill_pairs, merged_indices = remove_cycles(
+                watersheds, steepest_spill_pairs, ny, nx)
             remaining_spill_pairs = steepest_spill_pairs.difference(removed_spill_pairs)
             watersheds = [watersheds[i] for i in range(len(watersheds)) if i not in merged_indices]
             watersheds.extend(merged_watersheds)
@@ -734,7 +746,6 @@ def remove_cycles(watersheds, steepest, ny, nx):
     ws_not_being_merged = np.setdiff1d(np.arange(0, len(watersheds), 1), merged_indices)
     merged_watersheds = [np.concatenate([watersheds[el] for el in c]) for c in cycles]
 
-
     # Remove the no longer valid spill pairs
     d = {}
     for s_p in steepest:
@@ -745,36 +756,6 @@ def remove_cycles(watersheds, steepest, ny, nx):
     removed_spill_pairs = set([d[el] for el in spill_pairs if el[0] in merged_indices])
 
     return merged_watersheds, removed_spill_pairs, merged_indices
-
-#    map_ix_to_ws = map_nodes_to_watersheds(watersheds, rows, cols)
-#    steepest_pairs_ws_nr = [(map_ix_to_ws[p[0]], map_ix_to_ws[p[1]]) for p in steepest_spill_pairs
-#                            if map_ix_to_ws[p[1]] != -1]
-#    from_ws = [p[0] for p in steepest_pairs_ws_nr]
-#    to_ws = [p[1] for p in steepest_pairs_ws_nr]
-#    nr_of_watersheds = len(watersheds)
-#
-#    row_indices = from_ws
-#    col_indices = to_ws
-#    data = np.ones(len(row_indices))
-#    conn_mat = csr_matrix((data, (row_indices, col_indices)), shape=(nr_of_watersheds, nr_of_watersheds), dtype=int)
-#
-#    T = conn_mat + identity(nr_of_watersheds, dtype=int)
-#    prev_T = csr_matrix((nr_of_watersheds, nr_of_watersheds), dtype=int)
-#
-#    print 'yayay: ', T.todense()
-#
-#    # While to detect cycles
-#    while (prev_T != T).nnz != 0:
-#        prev_T = T
-#        T = T * T
-#        T[T.nonzero()] = 1  # Make elements larger than 0 equal to 1
-#        print 'whilwhiel: ', T.todense()
-#
-#    # Remove the cycles
-#    print (T - csr_matrix.transpose(T)).todense()
-#    print csr_matrix.transpose(T).todense()
-
-#    return 0
 
 
 def merge_watersheds(watersheds, steepest, nx, ny):
