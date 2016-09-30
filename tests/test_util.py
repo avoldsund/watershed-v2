@@ -373,11 +373,11 @@ def test_combine_watersheds():
 
 def test_combine_minima():
 
-    rows = 2
-    cols = 2
-    local_minima = np.array([1, 3])
+    rows = 4
+    cols = 4
+    local_minima = np.array([6, 10])
 
-    comb_min = [np.array([1, 3])]
+    comb_min = [np.array([6, 10])]
     result_comb_min = util.combine_minima(local_minima, rows, cols)
     for i in range(len(result_comb_min)):
         result_comb_min[i] = sorted(result_comb_min[i])
@@ -387,11 +387,11 @@ def test_combine_minima():
 
 def test_combine_minima_three_comb():
 
-    rows = 3
-    cols = 4
-    local_minima = np.array([0, 3, 4, 11])
+    rows = 5
+    cols = 6
+    local_minima = np.array([7, 10, 13, 22])
 
-    comb_min = [np.array([0, 4]), np.array([3]), np.array([11])]
+    comb_min = [np.array([7, 13]), np.array([10]), np.array([22])]
     result_comb_min = util.combine_minima(local_minima, rows, cols)
     for i in range(len(result_comb_min)):
         result_comb_min[i] = sorted(result_comb_min[i])
@@ -400,13 +400,13 @@ def test_combine_minima_three_comb():
 
 
 def test_combine_minima_advanced():
+    # This is from when interior nodes had indexing from 0
+    rows = 7
+    cols = 10
+    local_minima = np.array([11, 17, 18, 22, 23, 24, 33, 37, 38, 44, 46, 48, 52, 58])
 
-    rows = 5
-    cols = 8
-    local_minima = np.array([0, 6, 7, 9, 10, 11, 18, 22, 23, 27, 29, 31, 33, 39])
-
-    comb_min = [np.array([0, 9, 10, 11, 18, 27]), np.array([6, 7]),
-                np.array([22, 23, 29, 31, 39]), np.array([33])]
+    comb_min = [np.array([11, 22, 23, 24, 33, 44]), np.array([17, 18]),
+                np.array([37, 38, 46, 48, 58]), np.array([52])]
 
     result_comb_min = util.combine_minima(local_minima, rows, cols)
     for i in range(len(result_comb_min)):
@@ -540,14 +540,13 @@ def test_get_possible_spill_pairs():
                       [np.array([29, 29, 30, 30, 30, 31, 31, 31, 31, 31, 38, 38, 29, 29, 29, 36, 36, 36, 36, 36, 37, 37, 37, 38, 38, 38]),
                        np.array([22, 23, 22, 23, 24, 23, 24, 25, 32, 39, 32, 39, 21, 28, 35, 28, 35, 42, 43, 44, 43, 44, 45, 44, 45, 46])]]
 
-    result_min_of_max = np.array([4, 3, 3])
+    #result_min_of_max = np.array([4, 3, 3])
     result_spill_pairs = [[np.array([8]), np.array([0])],
                           [np.array([25, 32]), np.array([31, 31])],
                           [np.array([31, 31]), np.array([25, 32])]]
-    min_of_max, spill_pairs = util.get_possible_spill_pairs(heights, boundary_pairs)
+    spill_pairs = util.get_possible_spill_pairs(heights, boundary_pairs)
 
-    assert compare_methods.compare_list_of_lists_by_comparing_sets(result_spill_pairs, spill_pairs) \
-           and np.array_equal(result_min_of_max, min_of_max)
+    assert compare_methods.compare_list_of_lists_by_comparing_sets(result_spill_pairs, spill_pairs)
 
 
 def test_get_steepest_spill_pair():
@@ -685,6 +684,82 @@ def test_combine_watersheds_spilling_into_each_other_simple():
     assert compare_methods.compare_watersheds(watersheds, result_watersheds)
 
 
+def test_get_spill_heights():
+
+    heights = np.array([[4, 10, 10, 10, 10, 10, 10],
+                        [10, 1, 8, 7, 7, 7, 10],
+                        [10, 6, 8, 5, 5, 5, 10],
+                        [10, 8, 8, 4, 2, 4, 10],
+                        [10, 9, 9, 3, 3, 3, 10],
+                        [10, 0, 1, 5, 5, 5, 10],
+                        [10, 10, 10, 10, 10, 10, 10]])
+    watersheds = [np.array([8, 9, 15, 16, 22]),
+                  np.array([10, 11, 12, 17, 18, 19, 23, 24, 25, 26, 32, 33, 39, 40, 29, 30, 31, 36, 37, 38])]
+    steepest_spill_pairs = [(23, 15), (8, 0)]
+    result_spill_heights = np.array([4, 8])
+
+    spill_heights = util.get_spill_heights(watersheds, heights, steepest_spill_pairs)
+
+    assert np.array_equal(spill_heights, result_spill_heights)
+
+
+def test_get_size_of_traps():
+
+    heights = np.array([[4, 10, 10, 10, 10, 10, 10],
+                        [10, 1, 8, 7, 7, 7, 10],
+                        [10, 6, 8, 5, 5, 5, 10],
+                        [10, 8, 8, 4, 2, 4, 10],
+                        [10, 9, 9, 3, 3, 3, 10],
+                        [10, 0, 1, 5, 5, 5, 10],
+                        [10, 10, 10, 10, 10, 10, 10]])
+    watersheds = [np.array([8, 9, 15, 16, 22]),
+                  np.array([10, 11, 12, 17, 18, 19, 23, 24, 25, 26, 32, 33, 39, 40, 29, 30, 31, 36, 37, 38])]
+    spill_heights = [4, 8]
+    result_size_of_traps = np.array([1, 18])
+
+    size_of_traps = util.get_size_of_traps(watersheds, heights, spill_heights)
+
+    assert np.array_equal(size_of_traps, result_size_of_traps)
+
+
+def test_remove_watersheds_below_threshold():
+
+    #total_nodes = 60
+    watersheds = [np.array([11, 12]),
+                  np.array([13, 14, 15, 16]),
+                  np.array([17, 18, 27]),
+                  np.array([21, 22, 23, 32, 33]),
+                  np.array([24, 25, 26, 34, 35, 36]),
+                  np.array([28, 37, 38]),
+                  np.array([31, 41, 42]),
+                  np.array([43, 44, 45, 46]),
+                  np.array([47, 48])]
+    rows = np.array([0, 1, 2, 3, 4, 5, 7])
+    cols = np.array([3, 4, 4, 1, 7, 8, 6])
+    data = np.array([1, 1, 1, 1, 1, 1, 1])
+    conn_mat = csr_matrix((data, (rows, cols)), shape=(9, 9))
+
+    # Arbitrary numbers, want 0, 8 and 4 gone
+    size_of_traps = np.array([2, 3, 3, 5, 1, 3, 3, 4, 1])
+    threshold_size = 3
+
+    new_rows = np.array([0, 1, 2, 5])
+    new_cols = np.array([5, 5, 0, 4])
+    new_data = np.array([1, 1, 1, 1])
+    result_conn_mat = csr_matrix((new_data, (new_rows, new_cols)), shape=(6, 6))
+    result_watersheds = [np.array([13, 14, 15, 16]),
+                         np.array([17, 18, 27]),
+                         np.array([11, 12, 21, 22, 23, 32, 33]),
+                         np.array([28, 37, 38]),
+                         np.array([31, 41, 42]),
+                         np.array([43, 44, 45, 46, 24, 25, 26, 34, 35, 36])]
+    # Notice that 47 and 48 were removed in the result_watersheds
+    new_conn_mat, watersheds = util.remove_watersheds_below_threshold(watersheds, conn_mat, size_of_traps, threshold_size)
+
+    assert np.array_equal(new_conn_mat.todense(), result_conn_mat.todense()) \
+           and compare_methods.compare_watersheds(watersheds, result_watersheds)
+
+
 def test_merge_watersheds():
 
     cols = 10
@@ -773,3 +848,57 @@ def test_create_watershed_conn_matrix():
     conn_mat = util.create_watershed_conn_matrix(watersheds, steepest_spill_pairs, rows, cols)
 
     assert np.array_equal(conn_mat.todense(), result_conn_mat.todense())
+
+
+def test_remove_ix_from_conn_mat_no_upslope():
+
+    rows = np.array([0, 1, 2, 3, 4, 5, 7])
+    cols = np.array([3, 4, 4, 1, 7, 8, 6])
+    data = np.array([1, 1, 1, 1, 1, 1, 1])
+    conn_mat = csr_matrix((data, (rows, cols)), shape=(9, 9))
+    remove_ix = 0
+
+    rows_new = np.array([0, 1, 2, 3, 4, 6])
+    cols_new = np.array([3, 3, 0, 6, 7, 5])
+    data_new = np.array([1, 1, 1, 1, 1, 1])
+    result_conn_mat = csr_matrix((data_new, (rows_new, cols_new)), shape=(8, 8))
+
+    new_conn_mat = util.remove_ix_from_conn_mat(conn_mat, remove_ix)
+
+    assert np.array_equal(new_conn_mat.todense(), result_conn_mat.todense())
+
+
+def test_remove_ix_from_conn_mat_no_downslope():
+
+    rows = np.array([0, 1, 2, 3, 4, 5, 7])
+    cols = np.array([3, 4, 4, 1, 7, 8, 6])
+    data = np.array([1, 1, 1, 1, 1, 1, 1])
+    conn_mat = csr_matrix((data, (rows, cols)), shape=(9, 9))
+    remove_ix = 8
+
+    rows_new = np.array([0, 1, 2, 3, 4, 7])
+    cols_new = np.array([3, 4, 4, 1, 7, 6])
+    data_new = np.array([1, 1, 1, 1, 1, 1])
+    result_conn_mat = csr_matrix((data_new, (rows_new, cols_new)), shape=(8, 8))
+
+    new_conn_mat = util.remove_ix_from_conn_mat(conn_mat, remove_ix)
+
+    assert np.array_equal(new_conn_mat.todense(), result_conn_mat.todense())
+
+
+def test_remove_ix_from_conn_mat_both_upslope_and_downslope():
+
+    rows = np.array([0, 1, 2, 3, 4, 5, 7])
+    cols = np.array([3, 4, 4, 1, 7, 8, 6])
+    data = np.array([1, 1, 1, 1, 1, 1, 1])
+    conn_mat = csr_matrix((data, (rows, cols)), shape=(9, 9))
+    remove_ix = 4
+
+    rows_new = np.array([0, 1, 2, 3, 4, 6])
+    cols_new = np.array([3, 6, 6, 1, 7, 5])
+    data_new = np.array([1, 1, 1, 1, 1, 1])
+    result_conn_mat = csr_matrix((data_new, (rows_new, cols_new)), shape=(8, 8))
+
+    new_conn_mat = util.remove_ix_from_conn_mat(conn_mat, remove_ix)
+
+    assert np.array_equal(new_conn_mat.todense(), result_conn_mat.todense())

@@ -48,7 +48,7 @@ def plot_watersheds_2d(watersheds, landscape, ds):
     # plt.colorbar(label='Height', spacing='uniform')
 
     # Only plot the n largest watersheds
-    ws_above_n_nodes = 1
+    ws_above_n_nodes = 0
     large_watersheds = [ws for ws in watersheds if len(ws) > ws_above_n_nodes]
     large_watersheds.sort(key=len)
     nr_of_large_watersheds = len(large_watersheds)
@@ -87,6 +87,48 @@ def plot_watersheds_2d(watersheds, landscape, ds):
     plt.ylabel('y')
 
     plt.show()
+
+
+def plot_watersheds_and_minima_2d(watersheds, minima, landscape, ds):
+
+    ws_above_n_nodes = 0
+    large_watersheds = [ws for ws in watersheds if len(ws) > ws_above_n_nodes]
+    large_watersheds.sort(key=len)
+    nr_of_large_watersheds = len(large_watersheds)
+
+    print 'nr of large watersheds: ', nr_of_large_watersheds
+
+    color_small = ['red', 'green', 'blue', 'yellow']
+    color_small = iter(color_small * (len(watersheds)/3))
+
+    nr_of_largest = 5
+
+    for i in range(0, nr_of_large_watersheds - nr_of_largest):
+        row_col = util.map_1d_to_2d(large_watersheds[i], landscape.nx)
+        plt.scatter(landscape.x_min + row_col[1][0::ds] * landscape.step_size,
+                    landscape.y_max - row_col[0][0::ds] * landscape.step_size,
+                    color=next(color_small), s=20, lw=0, alpha=1)
+
+    color_large = ['gold', 'darkgreen', 'darkorange', 'darkorchid', 'dodgerblue']
+    color_large = iter(color_large * (len(watersheds)/3))
+
+    for i in range(nr_of_large_watersheds - nr_of_largest, nr_of_large_watersheds):
+        row_col = util.map_1d_to_2d(large_watersheds[i], landscape.nx)
+        plt.scatter(landscape.x_min + row_col[1][0::ds] * landscape.step_size,
+                    landscape.y_max - row_col[0][0::ds] * landscape.step_size,
+                    color=next(color_large), s=20, lw=0, alpha=1)
+
+    for i in range(len(minima)):
+        row_col = util.map_1d_to_2d(minima[i], landscape.nx)
+        plt.scatter(landscape.x_min + row_col[1][0::ds] * landscape.step_size,
+                    landscape.y_max - row_col[0][0::ds] * landscape.step_size,
+                    color='black', s=20, lw=0, alpha=1)
+
+    plt.xlabel('x')
+    plt.ylabel('y')
+
+    plt.show()
+
 
 
 def plot_few_watersheds_2d(watersheds, landscape, ds):
@@ -187,29 +229,31 @@ def plot_local_minima(minima, landscape):
     plt.show()
 
 
-def plot_upslope_watersheds(watersheds, upslope_indices, w_nr, landscape, ds=1):
+def plot_upslope_watersheds(watersheds, upslope_indices, node_levels, landscape, ds=1):
 
     nr_of_watersheds = len(watersheds)
 
     color_small = ['red', 'green', 'blue', 'yellow']
     color_small = iter(color_small * (nr_of_watersheds/3))
+    print upslope_indices
+    upslope_colors = iter(cm.Blues_r(np.linspace(0, 1, len(node_levels))))
+    not_upslope = np.setdiff1d(np.arange(0, len(watersheds), 1), upslope_indices)
 
-    for i in range(0, nr_of_watersheds):
-        if i == w_nr:
-            row_col = util.map_1d_to_2d(watersheds[i], landscape.nx)
+    # Plot all non upslope watersheds in different colors
+    for el in not_upslope:
+        row_col = util.map_1d_to_2d(watersheds[el], landscape.nx)
+        plt.scatter(landscape.x_min + row_col[1][0::ds] * landscape.step_size,
+                    landscape.y_max - row_col[0][0::ds] * landscape.step_size,
+                    color=next(color_small), s=10, lw=0, alpha=1)
+
+    # Plot the upslope watersheds in different hues of blue to show the sequence of flow
+    for i in range(len(node_levels)):
+        level_color = next(upslope_colors)
+        for ws in np.asarray(node_levels[i]):
+            row_col = util.map_1d_to_2d(watersheds[ws], landscape.nx)
             plt.scatter(landscape.x_min + row_col[1][0::ds] * landscape.step_size,
                         landscape.y_max - row_col[0][0::ds] * landscape.step_size,
-                        color='gold', s=10, lw=0, alpha=1)
-        elif i in upslope_indices:
-            row_col = util.map_1d_to_2d(watersheds[i], landscape.nx)
-            plt.scatter(landscape.x_min + row_col[1][0::ds] * landscape.step_size,
-                        landscape.y_max - row_col[0][0::ds] * landscape.step_size,
-                        color='dodgerblue', s=10, lw=0, alpha=1)
-        else:
-            row_col = util.map_1d_to_2d(watersheds[i], landscape.nx)
-            plt.scatter(landscape.x_min + row_col[1][0::ds] * landscape.step_size,
-                        landscape.y_max - row_col[0][0::ds] * landscape.step_size,
-                        color=next(color_small), s=10, lw=0, alpha=1)
+                        color=level_color, s=10, lw=0, alpha=1)
 
     plt.xlabel('x')
     plt.ylabel('y')
@@ -217,35 +261,143 @@ def plot_upslope_watersheds(watersheds, upslope_indices, w_nr, landscape, ds=1):
     plt.show()
 
 
-def plot_up_and_downslope_watersheds(watersheds, upslope_indices, downslope_indices, w_nr, landscape, ds=4):
+def plot_downslope_watersheds(watersheds, downslope_indices, landscape, ds=1):
 
     nr_of_watersheds = len(watersheds)
 
     color_small = ['red', 'green', 'blue', 'yellow']
     color_small = iter(color_small * (nr_of_watersheds/3))
+    downslope_colors = iter(cm.RdPu_r(np.linspace(0, 1, len(downslope_indices))))
+    not_downslope = np.setdiff1d(np.arange(0, len(watersheds), 1), downslope_indices)
 
-    for i in range(0, nr_of_watersheds):
-        if i == w_nr:
-            row_col = util.map_1d_to_2d(watersheds[i], landscape.nx)
+    # Plot all non upslope watersheds in different colors
+    for el in not_downslope:
+        row_col = util.map_1d_to_2d(watersheds[el], landscape.nx)
+        plt.scatter(landscape.x_min + row_col[1][0::ds] * landscape.step_size,
+                    landscape.y_max - row_col[0][0::ds] * landscape.step_size,
+                    color=next(color_small), s=10, lw=0, alpha=1)
+
+    # Plot the upslope watersheds in different hues of blue to show the sequence of flow
+    for el in downslope_indices:
+        row_col = util.map_1d_to_2d(watersheds[el], landscape.nx)
+        plt.scatter(landscape.x_min + row_col[1][0::ds] * landscape.step_size,
+                    landscape.y_max - row_col[0][0::ds] * landscape.step_size,
+                    color=next(downslope_colors), s=10, lw=0, alpha=1)
+
+    plt.xlabel('x')
+    plt.ylabel('y')
+
+    plt.show()
+
+
+def plot_up_and_downslope_watersheds(watersheds, upslope_indices, downslope_indices, node_levels, landscape, ds=4):
+
+    # # Construct the (x, y)-coordinate system
+    # x_grid = np.linspace(landscape.x_min, landscape.x_max, landscape.interior_nx)
+    # y_grid = np.linspace(landscape.y_max, landscape.y_min, landscape.interior_ny)
+    # x, y = np.meshgrid(x_grid[0::ds], y_grid[0::ds])
+    # z = landscape.interior_heights[0::ds, 0::ds]
+    #
+    # # Plotting the terrain in the background
+    # cmap = plt.get_cmap('terrain')
+    # v = np.linspace(np.min(landscape.interior_heights), np.max(landscape.interior_heights), 100, endpoint=True)
+    # plt.contourf(x, y, z, v, cmap=cmap)
+    # plt.colorbar(label='Height', spacing='uniform')
+
+    nr_of_watersheds = len(watersheds)
+
+    color_small = ['red', 'green', 'blue', 'yellow']
+    color_small = iter(color_small * (nr_of_watersheds/3))
+    upslope_colors = iter(cm.Blues_r(np.linspace(0, 1, len(node_levels))))
+    not_upslope = np.setdiff1d(np.arange(0, len(watersheds), 1), upslope_indices)
+
+    # Plot all non upslope watersheds in different colors
+    for el in not_upslope:
+        row_col = util.map_1d_to_2d(watersheds[el], landscape.nx)
+        plt.scatter(landscape.x_min + row_col[1][0::ds] * landscape.step_size,
+                    landscape.y_max - row_col[0][0::ds] * landscape.step_size,
+                    color=next(color_small), s=10, lw=0, alpha=1)
+
+    # Plot the upslope watersheds in different hues of blue to show the sequence of flow
+    for i in range(len(node_levels)):
+        level_color = next(upslope_colors)
+        for ws in np.asarray(node_levels[i]):
+            row_col = util.map_1d_to_2d(watersheds[ws], landscape.nx)
             plt.scatter(landscape.x_min + row_col[1][0::ds] * landscape.step_size,
                         landscape.y_max - row_col[0][0::ds] * landscape.step_size,
-                        color='gold', s=10, lw=0, alpha=1)
-        elif i in upslope_indices:
-            row_col = util.map_1d_to_2d(watersheds[i], landscape.nx)
+                        color=level_color, s=10, lw=0, alpha=1)
+
+    downslope_colors = iter(cm.RdPu_r(np.linspace(0, 1, len(downslope_indices))))
+
+    # Plot the upslope watersheds in different hues of blue to show the sequence of flow
+    for el in downslope_indices:
+        row_col = util.map_1d_to_2d(watersheds[el], landscape.nx)
+        plt.scatter(landscape.x_min + row_col[1][0::ds] * landscape.step_size,
+                    landscape.y_max - row_col[0][0::ds] * landscape.step_size,
+                    color=next(downslope_colors), s=10, lw=0, alpha=1)
+
+    plt.xlabel('x')
+    plt.ylabel('y')
+
+    plt.show()
+
+
+def plot_trap_sizes(size_of_traps, size_order):
+
+    size_order = size_order[:-1]
+    plt.plot(np.arange(0, len(size_order), 1), size_of_traps[size_order])
+    plt.xlabel('Watershed nr')
+    plt.ylabel('Area of traps')
+    plt.title('The area of the trap region for each watershed')
+
+    font = {'family': 'normal',
+            # 'weight': 'bold',
+            'size': 22}
+
+    plt.rc('font', **font)
+
+    plt.show()
+
+
+def plot_traps(watersheds, spill_heights, threshold, landscape, ds):
+    # Plot all traps in their respective watersheds after thresholding
+
+    # For plotting the n largest watersheds in different colors
+    temp_watersheds = list(watersheds)
+    temp_watersheds.sort(key=len)
+    largest_watersheds = temp_watersheds[-5:]
+    largest_watersheds_length = [len(ws) for ws in largest_watersheds]
+    nr_of_watersheds = len(watersheds)
+
+    color_small = ['red', 'green', 'blue', 'yellow']
+    color_small = iter(color_small * (len(watersheds) / 3))
+    color_large = ['gold', 'darkgreen', 'darkorange', 'darkorchid', 'dodgerblue']
+    color_large = iter(color_large * (len(watersheds)/3))
+
+    for i in range(nr_of_watersheds):
+        ws = watersheds[i]
+        if len(ws) in largest_watersheds_length:
+            row_col = util.map_1d_to_2d(ws, landscape.nx)
             plt.scatter(landscape.x_min + row_col[1][0::ds] * landscape.step_size,
                         landscape.y_max - row_col[0][0::ds] * landscape.step_size,
-                        color='dodgerblue', s=10, lw=0, alpha=1)
-        elif i in downslope_indices:
-            row_col = util.map_1d_to_2d(watersheds[i], landscape.nx)
-            plt.scatter(landscape.x_min + row_col[1][0::ds] * landscape.step_size,
-                        landscape.y_max - row_col[0][0::ds] * landscape.step_size,
-                        color='darkorchid', s=10, lw=0, alpha=1)
+                        color=next(color_large), s=10, lw=0, alpha=1)
         else:
-            row_col = util.map_1d_to_2d(watersheds[i], landscape.nx)
+            row_col = util.map_1d_to_2d(ws, landscape.nx)
             plt.scatter(landscape.x_min + row_col[1][0::ds] * landscape.step_size,
                         landscape.y_max - row_col[0][0::ds] * landscape.step_size,
                         color=next(color_small), s=10, lw=0, alpha=1)
 
+    # Plot all traps
+    for i in range(nr_of_watersheds):
+        spill_height = spill_heights[i]
+        trap_nodes_indices = np.where(landscape.heights[util.map_1d_to_2d(watersheds[i], landscape.nx)] <= spill_height)[0]
+        print len(trap_nodes_indices)
+        row_col = util.map_1d_to_2d(watersheds[i][trap_nodes_indices], landscape.nx)
+        plt.scatter(landscape.x_min + row_col[1][0::ds] * landscape.step_size,
+                    landscape.y_max - row_col[0][0::ds] * landscape.step_size,
+                    color='black', s=10, lw=0, alpha=1)
+
+    plt.title('The traps of the watersheds with over %s cells in the landscape' % str(threshold))
     plt.xlabel('x')
     plt.ylabel('y')
 

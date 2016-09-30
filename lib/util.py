@@ -360,21 +360,17 @@ def combine_minima(local_minima, rows, cols):
     onetwentyeight = local_minima_2d[0] - 1, local_minima_2d[1]
 
     nbrs_to_minima = np.hstack((one, two, four, eight, sixteen, thirtytwo, sixtyfour, onetwentyeight))
-    valid_nbrs_to_minima = np.where(np.logical_and(np.logical_and(nbrs_to_minima[0] >= 0, nbrs_to_minima[0] < rows),
-                                                   np.logical_and(nbrs_to_minima[1] >= 0, nbrs_to_minima[1] < cols)))[0]
-
+    nbrs_to_minima_1d = map_2d_to_1d(nbrs_to_minima, cols)
     from_min = np.concatenate([local_minima for i in range(8)])
-    to = map_2d_to_1d(nbrs_to_minima[:, valid_nbrs_to_minima], cols)
-    from_min = from_min[valid_nbrs_to_minima]
 
-    # Remove all connections not between minima
-    valid_pairs = np.where(np.in1d(to, local_minima))[0]
-    to = to[valid_pairs]
-    from_min = from_min[valid_pairs]
-    data = np.ones(len(to))
+    # Only keep connections between minima
+    nbrs_are_minima = np.where(np.in1d(nbrs_to_minima_1d, local_minima))[0]
+    to_min = nbrs_to_minima_1d[nbrs_are_minima]
+    from_min = from_min[nbrs_are_minima]
+    data = np.ones(len(to_min))
 
     # Make connectivity matrix between pairs of minima
-    conn = csr_matrix((data, (from_min, to)), shape=(rows*cols, rows*cols), dtype=int)
+    conn = csr_matrix((data, (from_min, to_min)), shape=(rows*cols, rows*cols), dtype=int)
     n_components, labels = csgraph.connected_components(conn, directed=False)
     unique, counts = np.unique(labels, return_counts=True)
 
@@ -581,14 +577,13 @@ def get_possible_spill_pairs(heights, boundary_pairs):
     :param heights: Heights of terrain
     :param boundary_pairs: Pairs between watershed boundaries
     :return spill_pairs: Possible spill pairs
-    :return spill_height: Height of point where it will pour out
     """
 
     rows, cols = np.shape(heights)
     heights = np.reshape(heights, rows * cols)
     heights_pairs = [heights[np.vstack((arr[0], arr[1]))] for arr in boundary_pairs]
 
-    # Max elevation of each pair, get min of that
+    # Min(max elevation of each pair)
     min_of_max = [np.min(np.max(heights_pairs[i], axis=0)) for i in range(len(heights_pairs))]
 
     # If x -> y, both x and y have heights <= min_of_max
@@ -597,9 +592,7 @@ def get_possible_spill_pairs(heights, boundary_pairs):
 
     spill_pairs = [[boundary_pairs[i][0][indices[i]], boundary_pairs[i][1][indices[i]]] for i in range(len(indices))]
 
-    spill_height = min_of_max
-
-    return spill_height, spill_pairs
+    return spill_pairs
 
 
 def get_steepest_spill_pair(heights, spill_pairs):
@@ -700,7 +693,7 @@ def combine_watersheds_spilling_into_each_other(watersheds, heights):
 
         # Find spill pairs for given watersheds
         boundary_pairs = get_boundary_pairs_for_specific_watersheds(merged_watersheds, nx)
-        spill_height, spill_pairs = get_possible_spill_pairs(heights, boundary_pairs)
+        spill_pairs = get_possible_spill_pairs(heights, boundary_pairs)
         steepest_spill_pairs = get_steepest_spill_pair(heights, spill_pairs)
 
         # Add the new spill pairs to the unaltered ones
@@ -746,7 +739,7 @@ def remove_cycles(watersheds, steepest, ny, nx):
     ws_not_being_merged = np.setdiff1d(np.arange(0, len(watersheds), 1), merged_indices)
     merged_watersheds = [np.concatenate([watersheds[el] for el in c]) for c in cycles]
 
-    # Remove the no longer valid spill pairs
+    # Remove the no longer valid spill pairsrows * cols
     d = {}
     for s_p in steepest:
         key = (mapping[s_p[0]], mapping[s_p[1]])
@@ -756,6 +749,100 @@ def remove_cycles(watersheds, steepest, ny, nx):
     removed_spill_pairs = set([d[el] for el in spill_pairs if el[0] in merged_indices])
 
     return merged_watersheds, removed_spill_pairs, merged_indices
+
+
+def get_spill_heights(watersheds, heights, steepest_spill_pairs):
+    """
+    Returns the height of spilling
+    :param watersheds: All watersheds for landscape
+    :param heights: Heights of landscape
+    :param steepest_spill_pairs: One pair for each watershed, (from_node, to_node)
+    :return spill_heights: The spill height for each watershed
+    """
+
+    r, c = np.shape(heights)
+    mapping = map_nodes_to_watersheds(watersheds, r, c)
+
+    ws_pair_heights = [((mapping[el[0]], mapping[el[1]]), max(heights[map_1d_to_2d(el[0], c)], heights[map_1d_to_2d(el[1], c)]))
+     for el in steepest_spill_pairs]
+    ws_pair_heights = sorted(ws_pair_heights)
+    spill_heights = np.asarray([el[1] for el in ws_pair_heights])
+
+    return spill_heights
+
+
+def get_size_of_traps(watersheds, heights, spill_heights):
+    """
+    Returns the size of the traps for each watershed, i.e. the number of cells below the spill height
+    :param watersheds: All watersheds for landscape
+    :param heights: Heights of landscape
+    :param spill_heights: The spill height for each watershed
+    :return size_of_traps: Number of elements below spill height for each watershed
+    """
+
+    r, c = np.shape(heights)
+    size_of_traps = np.asarray([np.sum(heights[map_1d_to_2d(watersheds[i], c)] <= spill_heights[i])
+                                for i in range(len(spill_heights))])
+
+    return size_of_traps
+
+
+def remap_steepest_spill_pairs(watersheds, steepest_spill_pairs, rows, cols):
+
+    mapping = map_nodes_to_watersheds(watersheds, rows, cols)
+    steepest_spill_pairs = [el for el in steepest_spill_pairs
+                            if np.logical_and(mapping[el[0]] != -1, mapping[el[0]] != mapping[el[1]])]
+
+    return steepest_spill_pairs
+
+
+def remove_ix_from_conn_mat(conn_mat, ix):
+    """
+    Remove indicated index from connectivity matrix. Reroute all connections.
+    :param conn_mat: Connectivity between watersheds
+    :param ix: Watershed below threshold to be removed
+    :return conn_mat: The new connectivity matrix with index removed
+    """
+
+    nr_of_watersheds = conn_mat.shape[0]
+    keep_indices = np.concatenate((np.arange(0, ix, 1, dtype=int), np.arange(ix+1, nr_of_watersheds, 1, dtype=int)))
+    downslope_indices = conn_mat[ix, :].nonzero()[1]  # Only one
+    upslope_indices = conn_mat[:, ix].nonzero()[0]  # Might be several
+
+    # Reroute before remove
+    if len(downslope_indices) and len(upslope_indices):
+        conn_mat[upslope_indices, downslope_indices] = 1
+
+    conn_mat = conn_mat[keep_indices, :]  # Keep rows
+    conn_mat = conn_mat[:, keep_indices]  # Keep cols
+
+    return conn_mat
+
+
+def remove_watersheds_below_threshold(watersheds, conn_mat, size_of_traps, threshold_size):
+
+    remove_indices = np.where(size_of_traps < threshold_size)[0]
+    it = 0
+
+    for i in range(len(remove_indices)):
+        remove_ix = remove_indices[i]
+        downslope_ws = conn_mat[remove_ix, :].nonzero()[1]  # Only one
+        upslope_ws = conn_mat[:, remove_ix].nonzero()[0]  # Might be several
+        a = watersheds[remove_ix]
+        if len(downslope_ws) == 0 and len(upslope_ws) == 0:  # Loner watershed
+            del watersheds[remove_ix]
+            remove_indices[remove_indices > remove_ix] -= 1
+            conn_mat = remove_ix_from_conn_mat(conn_mat, remove_ix)
+            it += 1
+        else:
+            if len(downslope_ws):  # Merge with downslope
+                watersheds[downslope_ws] = np.concatenate((watersheds[downslope_ws], watersheds[remove_ix]))
+            del watersheds[remove_ix]
+            remove_indices[remove_indices > remove_ix] -= 1
+            conn_mat = remove_ix_from_conn_mat(conn_mat, remove_ix)
+            it += 1
+
+    return conn_mat, watersheds
 
 
 def merge_watersheds(watersheds, steepest, nx, ny):
