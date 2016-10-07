@@ -340,9 +340,7 @@ def test_get_local_watersheds():
                                10: np.array([10]),
                                13: np.array([13, 14, 19, 20]),
                                22: np.array([9, 15, 16, 21, 22])}
-    print result_local_watersheds
     local_watersheds = util.get_local_watersheds(node_endpoints)
-    print local_watersheds
 
     assert compare_methods.compare_minima_watersheds(local_watersheds, result_local_watersheds)
 
@@ -662,7 +660,7 @@ def test_combine_watersheds_spilling_into_each_other():
     result_watersheds = [np.array([9, 10, 11, 12]),
                          np.array([13, 14])]
 
-    watersheds, steepest = util.combine_watersheds_spilling_into_each_other(watersheds, heights)
+    watersheds, steepest_spill_pairs = util.combine_watersheds_spilling_into_each_other(watersheds, heights)
 
     assert compare_methods.compare_watersheds(watersheds, result_watersheds)
 
@@ -679,7 +677,7 @@ def test_combine_watersheds_spilling_into_each_other_simple():
     result_watersheds = [np.array([10, 11, 12, 19, 20, 21, 28, 29, 30,
                                    13, 14, 15, 16, 22, 23, 24, 25, 31, 32, 33, 34])]
 
-    watersheds, steepest = util.combine_watersheds_spilling_into_each_other(watersheds, heights)
+    watersheds, steepest_spill_pairs = util.combine_watersheds_spilling_into_each_other(watersheds, heights)
 
     assert compare_methods.compare_watersheds(watersheds, result_watersheds)
 

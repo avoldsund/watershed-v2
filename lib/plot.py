@@ -62,12 +62,12 @@ def plot_watersheds_2d(watersheds, landscape, ds):
             row_col = util.map_1d_to_2d(watersheds[i], landscape.nx)
             plt.scatter(landscape.x_min + row_col[1][0::ds] * landscape.step_size,
                         landscape.y_max - row_col[0][0::ds] * landscape.step_size,
-                        color=next(color_large), s=2, lw=0, alpha=1)
+                        color=next(color_large), s=10, lw=0, alpha=1)
         else:
             row_col = util.map_1d_to_2d(watersheds[i], landscape.nx)
             plt.scatter(landscape.x_min + row_col[1][0::ds] * landscape.step_size,
                         landscape.y_max - row_col[0][0::ds] * landscape.step_size,
-                        color=next(color_small), s=2, lw=0, alpha=1)
+                        color=next(color_small), s=10, lw=0, alpha=1)
 
     # Plot the boundary nodes
     for i in range(nr_of_watersheds):
@@ -76,7 +76,7 @@ def plot_watersheds_2d(watersheds, landscape, ds):
         row_col = util.map_1d_to_2d(u, landscape.nx)
         plt.scatter(landscape.x_min + row_col[1][0::ds] * landscape.step_size,
                     landscape.y_max - row_col[0][0::ds] * landscape.step_size,
-                    color='black', s=2, lw=0, alpha=1)
+                    color='black', s=10, lw=0, alpha=1)
 
     plt.title('All watersheds in the landscape')
     font = {'family': 'normal',
@@ -423,7 +423,7 @@ def plot_trap_sizes(size_of_traps, size_order):
     plt.show()
 
 
-def plot_traps(watersheds, spill_heights, threshold, landscape, ds):
+def plot_traps(watersheds, traps, threshold, landscape, ds):
     # Plot all traps in their respective watersheds after thresholding
 
     nr_of_watersheds = len(watersheds)
@@ -440,10 +440,9 @@ def plot_traps(watersheds, spill_heights, threshold, landscape, ds):
                     color=next(color_small), s=2, lw=0, alpha=1)
 
     # Plot all traps
-    for i in range(nr_of_watersheds):
-        spill_height = spill_heights[i]
-        trap_nodes_indices = np.where(landscape.heights[util.map_1d_to_2d(watersheds[i], landscape.nx)] <= spill_height)[0]
-        row_col = util.map_1d_to_2d(watersheds[i][trap_nodes_indices], landscape.nx)
+    for i in range(len(traps)):
+        trap = traps[i]
+        row_col = util.map_1d_to_2d(trap, landscape.nx)
         plt.scatter(landscape.x_min + row_col[1][0::ds] * landscape.step_size,
                     landscape.y_max - row_col[0][0::ds] * landscape.step_size,
                     color='gold', s=2, lw=0, alpha=1)
@@ -460,6 +459,237 @@ def plot_traps(watersheds, spill_heights, threshold, landscape, ds):
                     color='black', s=2, lw=0, alpha=1)
 
     plt.title('The traps of the watersheds with over %s cells in the landscape' % str(threshold))
+    font = {'family': 'normal',
+            'size': 18}
+    plt.rc('font', **font)
+    plt.xlabel('x')
+    plt.ylabel('y')
+
+    plt.show()
+
+
+def plot_traps_and_rivers(watersheds, traps, rivers, threshold, landscape, ds):
+    # Plot all traps and rivers in thresholded watersheds
+
+    nr_of_watersheds = len(watersheds)
+
+    color_hex = ['#d9d9d9', '#bdbdbd', '#969696', '#737373', '#525252', '#252525']
+    color_small = iter(color_hex * (len(watersheds) / 3))
+
+    # Plot the watersheds
+    for i in range(nr_of_watersheds):
+        ws = watersheds[i]
+        row_col = util.map_1d_to_2d(ws, landscape.nx)
+        plt.scatter(landscape.x_min + row_col[1][0::ds] * landscape.step_size,
+                    landscape.y_max - row_col[0][0::ds] * landscape.step_size,
+                    color=next(color_small), s=2, lw=0, alpha=1)
+
+    # Plot all traps
+    for i in range(len(traps)):
+        trap = traps[i]
+        row_col = util.map_1d_to_2d(trap, landscape.nx)
+        plt.scatter(landscape.x_min + row_col[1][0::ds] * landscape.step_size,
+                    landscape.y_max - row_col[0][0::ds] * landscape.step_size,
+                    color='gold', s=2, lw=0, alpha=1)
+
+    # Plot the boundary nodes
+    boundary_pairs = util.get_boundary_pairs_in_watersheds(watersheds, landscape.nx, landscape.ny)
+    for i in range(nr_of_watersheds):
+        b_p = boundary_pairs[i]
+        u = np.unique(np.concatenate((b_p[0], b_p[1])))
+        row_col = util.map_1d_to_2d(u, landscape.nx)
+        plt.scatter(landscape.x_min + row_col[1][0::ds] * landscape.step_size,
+                    landscape.y_max - row_col[0][0::ds] * landscape.step_size,
+                    color='black', s=2, lw=0, alpha=1)
+
+    # Plot rivers
+    row_col = util.map_1d_to_2d(rivers, landscape.nx)
+    plt.scatter(landscape.x_min + row_col[1][0::1] * landscape.step_size,
+                landscape.y_max - row_col[0][0::1] * landscape.step_size,
+                color='royalblue', s=2, lw=0, alpha=1)
+
+    plt.title('The traps and the rivers of the watersheds with over %s cells in the landscape' % str(threshold))
+    font = {'family': 'normal',
+            'size': 18}
+    plt.rc('font', **font)
+    plt.xlabel('x')
+    plt.ylabel('y')
+
+    plt.show()
+
+
+def plot_watersheds_in_river_2d(watersheds, ws_indices, river_watersheds, landscape, ds):
+
+    selected_watersheds = [watersheds[i] for i in range(len(watersheds)) if i in ws_indices]
+    s_w = np.concatenate(selected_watersheds)
+    boundary_pairs = util.get_boundary_pairs_in_watersheds(selected_watersheds, landscape.nx, landscape.ny)
+
+    color_hex = ['#e41a1c', '#377eb8', '#4daf4a', '#984ea3', '#ff7f00', '#ffff33', '#a65628', '#f781bf']
+    color_small = iter(color_hex * (len(watersheds)/3))
+
+    for i in ws_indices:
+        if i in river_watersheds:
+            row_col = util.map_1d_to_2d(watersheds[i], landscape.nx)
+            plt.scatter(landscape.x_min + row_col[1][0::ds] * landscape.step_size,
+                        landscape.y_max - row_col[0][0::ds] * landscape.step_size,
+                        color='navy', s=10, lw=0, alpha=1)
+        else:
+            row_col = util.map_1d_to_2d(watersheds[i], landscape.nx)
+            plt.scatter(landscape.x_min + row_col[1][0::ds] * landscape.step_size,
+                        landscape.y_max - row_col[0][0::ds] * landscape.step_size,
+                        color=next(color_small), s=10, lw=0, alpha=1)
+
+    # Plot the boundary nodes
+    for i in range(len(boundary_pairs)):
+        b_p = boundary_pairs[i]
+        u = np.unique(np.concatenate((b_p[0], b_p[1])))
+        row_col = util.map_1d_to_2d(u, landscape.nx)
+        plt.scatter(landscape.x_min + row_col[1][0::ds] * landscape.step_size,
+                    landscape.y_max - row_col[0][0::ds] * landscape.step_size,
+                    color='black', s=10, lw=0, alpha=1)
+
+    plt.title('All watersheds in the landscape')
+    font = {'family': 'normal',
+            'size': 18}
+    plt.rc('font', **font)
+    plt.xlabel('x')
+    plt.ylabel('y')
+
+    plt.show()
+
+
+def plot_watersheds_in_river_and_trap_2d(watersheds, traps, ws_indices, river_watersheds, landscape, ds):
+
+    selected_watersheds = [watersheds[i] for i in range(len(watersheds)) if i in ws_indices]
+    s_w = np.concatenate(selected_watersheds)
+    boundary_pairs = util.get_boundary_pairs_in_watersheds(selected_watersheds, landscape.nx, landscape.ny)
+
+    color_hex = ['#e41a1c', '#377eb8', '#4daf4a', '#984ea3', '#ff7f00', '#ffff33', '#a65628', '#f781bf']
+    color_small = iter(color_hex * (len(watersheds)/3))
+
+    for i in ws_indices:
+        if i in river_watersheds:
+            row_col = util.map_1d_to_2d(watersheds[i], landscape.nx)
+            plt.scatter(landscape.x_min + row_col[1][0::ds] * landscape.step_size,
+                        landscape.y_max - row_col[0][0::ds] * landscape.step_size,
+                        color='navy', s=10, lw=0, alpha=1)
+        else:
+            row_col = util.map_1d_to_2d(watersheds[i], landscape.nx)
+            plt.scatter(landscape.x_min + row_col[1][0::ds] * landscape.step_size,
+                        landscape.y_max - row_col[0][0::ds] * landscape.step_size,
+                        color=next(color_small), s=10, lw=0, alpha=1)
+
+    # Plot the boundary nodes
+    for i in range(len(boundary_pairs)):
+        b_p = boundary_pairs[i]
+        u = np.unique(np.concatenate((b_p[0], b_p[1])))
+        row_col = util.map_1d_to_2d(u, landscape.nx)
+        plt.scatter(landscape.x_min + row_col[1][0::ds] * landscape.step_size,
+                    landscape.y_max - row_col[0][0::ds] * landscape.step_size,
+                    color='black', s=10, lw=0, alpha=1)
+
+    # Plot all traps
+    trap = traps[0]
+    row_col = util.map_1d_to_2d(trap, landscape.nx)
+    plt.scatter(landscape.x_min + row_col[1][0::ds] * landscape.step_size,
+                landscape.y_max - row_col[0][0::ds] * landscape.step_size,
+                color='gold', s=10, lw=0, alpha=1)
+
+    plt.title('All watersheds in the landscape')
+    font = {'family': 'normal',
+            'size': 18}
+    plt.rc('font', **font)
+    plt.xlabel('x')
+    plt.ylabel('y')
+
+    plt.show()
+
+
+def plot_traps_in_river_2d(watersheds, traps, ws_indices, river_watersheds, landscape, ds):
+
+    selected_watersheds = [watersheds[i] for i in range(len(watersheds)) if i in ws_indices]
+    boundary_pairs = util.get_boundary_pairs_in_watersheds(selected_watersheds, landscape.nx, landscape.ny)
+
+    color_hex = ['#e41a1c', '#377eb8', '#4daf4a', '#984ea3', '#ff7f00', '#ffff33', '#a65628', '#f781bf']
+    color_small = iter(color_hex * (len(watersheds)/3))
+
+    for i in ws_indices:
+        if i in river_watersheds:
+            row_col = util.map_1d_to_2d(watersheds[i], landscape.nx)
+            plt.scatter(landscape.x_min + row_col[1][0::ds] * landscape.step_size,
+                        landscape.y_max - row_col[0][0::ds] * landscape.step_size,
+                        color='navy', s=10, lw=0, alpha=1)
+        else:
+            row_col = util.map_1d_to_2d(watersheds[i], landscape.nx)
+            plt.scatter(landscape.x_min + row_col[1][0::ds] * landscape.step_size,
+                        landscape.y_max - row_col[0][0::ds] * landscape.step_size,
+                        color=next(color_small), s=10, lw=0, alpha=1)
+
+    # Plot the boundary nodes
+    for i in range(len(boundary_pairs)):
+        b_p = boundary_pairs[i]
+        u = np.unique(np.concatenate((b_p[0], b_p[1])))
+        row_col = util.map_1d_to_2d(u, landscape.nx)
+        plt.scatter(landscape.x_min + row_col[1][0::ds] * landscape.step_size,
+                    landscape.y_max - row_col[0][0::ds] * landscape.step_size,
+                    color='black', s=10, lw=0, alpha=1)
+
+    # Plot all traps
+    for t in traps:
+        row_col = util.map_1d_to_2d(t, landscape.nx)
+        plt.scatter(landscape.x_min + row_col[1][0::ds] * landscape.step_size,
+                    landscape.y_max - row_col[0][0::ds] * landscape.step_size,
+                    color='gold', s=10, lw=0, alpha=1)
+
+    plt.title('All watersheds in the landscape')
+    font = {'family': 'normal',
+            'size': 18}
+    plt.rc('font', **font)
+    plt.xlabel('x')
+    plt.ylabel('y')
+
+    plt.show()
+
+
+def plot_traps_and_river_in_one_watershed_2d(selected_traps, selected_watersheds, selected_river, landscape, ds):
+    # This is a method for looking at sub-all_watersheds within a single thresholded watershed
+
+    # Only get the boundary points of the sub-all_watersheds
+    boundary_pairs = util.get_boundary_pairs_in_watersheds(selected_watersheds, landscape.nx, landscape.ny)
+
+    color_hex = ['#d9d9d9', '#bdbdbd', '#969696', '#737373', '#525252', '#252525']
+    color_ws = iter(color_hex * (len(selected_watersheds) / 3))
+
+    # Plot the watersheds in the thresholded watershed
+    for ws in selected_watersheds:
+        row_col = util.map_1d_to_2d(ws, landscape.nx)
+        plt.scatter(landscape.x_min + row_col[1][0::ds] * landscape.step_size,
+                    landscape.y_max - row_col[0][0::ds] * landscape.step_size,
+                    color=next(color_ws), s=10, lw=0, alpha=1)
+
+    # Plot the boundary nodes
+    for i in range(len(boundary_pairs)):
+        b_p = boundary_pairs[i]
+        u = np.unique(np.concatenate((b_p[0], b_p[1])))
+        row_col = util.map_1d_to_2d(u, landscape.nx)
+        plt.scatter(landscape.x_min + row_col[1][0::ds] * landscape.step_size,
+                    landscape.y_max - row_col[0][0::ds] * landscape.step_size,
+                    color='black', s=10, lw=0, alpha=1)
+
+    # Plot the traps in the river watersheds
+    for t in selected_traps:
+        row_col = util.map_1d_to_2d(t, landscape.nx)
+        plt.scatter(landscape.x_min + row_col[1][0::ds] * landscape.step_size,
+                    landscape.y_max - row_col[0][0::ds] * landscape.step_size,
+                    color='gold', s=10, lw=0, alpha=1)
+
+    # Plot the river in this watershed
+    river_row_col = util.map_1d_to_2d(selected_river, landscape.nx)
+    plt.scatter(landscape.x_min + river_row_col[1][0::1] * landscape.step_size,
+                landscape.y_max - river_row_col[0][0::1] * landscape.step_size,
+                color='fuchsia', s=10, lw=0, alpha=1)
+
+    plt.title('All watersheds in the landscape')
     font = {'family': 'normal',
             'size': 18}
     plt.rc('font', **font)

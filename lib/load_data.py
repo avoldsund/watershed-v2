@@ -11,11 +11,8 @@ class Landscape:
         self.y_max = geo_transform[3]
         self.x_max = self.x_min + geo_transform[1] * (self.nx - 1)
         self.y_min = self.y_max + geo_transform[5] * (self.ny - 1)
-        self.interior_nx = ds.RasterXSize - 2
-        self.interior_ny = ds.RasterYSize - 2
         self.total_nodes = self.nx * self.ny
         self.heights = None
-        self.interior_heights = None
 
         step_size_x = geo_transform[1]
         step_size_y = geo_transform[5]
@@ -71,7 +68,6 @@ def get_landscape(file_name):
     heights = get_array_from_band(data_set)
     landscape = Landscape(data_set)
     landscape.heights = heights
-    landscape.interior_heights = landscape.heights[1:-1, 1:-1]
 
     return landscape
 
@@ -94,9 +90,6 @@ def get_landscape_tyrifjorden(file_name):
     landscape.x_min += landscape.step_size
     landscape.y_min += landscape.step_size
     landscape.total_nodes = landscape.nx * landscape.ny
-    landscape.interior_heights = landscape.heights[1:-1, 1:-1]
-    landscape.interior_nx -= 1
-    landscape.interior_ny -= 1
 
     return landscape
 
@@ -115,16 +108,13 @@ def get_smaller_test_landscape(file_name):
     landscape.x_min += landscape.step_size
     landscape.y_min -= landscape.step_size * 3500
     landscape.total_nodes = landscape.nx * landscape.ny
-    landscape.interior_heights = landscape.heights[1:-1, 1:-1]
-    landscape.interior_nx = landscape.nx - 2
-    landscape.interior_ny = landscape.ny - 2
 
     return landscape
 
 
 def get_smallest_test_landscape(file_name):
 
-    size = 200
+    size = 500
     data_set = load_ds(file_name)
     heights = get_array_from_band(data_set)
     heights = heights[0:-1, 1:]
@@ -137,8 +127,5 @@ def get_smallest_test_landscape(file_name):
     landscape.x_min += landscape.step_size
     landscape.y_min -= landscape.step_size * (4000 - size)
     landscape.total_nodes = landscape.nx * landscape.ny
-    landscape.interior_heights = landscape.heights[1:-1, 1:-1]
-    landscape.interior_nx = landscape.nx - 2
-    landscape.interior_ny = landscape.ny - 2
 
     return landscape

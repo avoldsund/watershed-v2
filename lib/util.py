@@ -716,6 +716,12 @@ def combine_watersheds_spilling_into_each_other(watersheds, heights):
             watersheds = [watersheds[i] for i in range(len(watersheds)) if i not in merged_indices]
             watersheds.extend(merged_watersheds)
 
+    # Order the steepest spill pairs
+    mapping = map_nodes_to_watersheds(watersheds, ny, nx)
+    steepest_spill_pairs = list(steepest_spill_pairs)
+    order = np.argsort([mapping[s[0]] for s in steepest_spill_pairs])
+    steepest_spill_pairs = [steepest_spill_pairs[el] for el in order]
+
     return watersheds, steepest_spill_pairs
 
 
@@ -739,7 +745,7 @@ def remove_cycles(watersheds, steepest, ny, nx):
     ws_not_being_merged = np.setdiff1d(np.arange(0, len(watersheds), 1), merged_indices)
     merged_watersheds = [np.concatenate([watersheds[el] for el in c]) for c in cycles]
 
-    # Remove the no longer valid spill pairsrows * cols
+    # Remove the no longer valid spill pairs
     d = {}
     for s_p in steepest:
         key = (mapping[s_p[0]], mapping[s_p[1]])
@@ -764,7 +770,7 @@ def get_spill_heights(watersheds, heights, steepest_spill_pairs):
     mapping = map_nodes_to_watersheds(watersheds, r, c)
 
     ws_pair_heights = [((mapping[el[0]], mapping[el[1]]), max(heights[map_1d_to_2d(el[0], c)], heights[map_1d_to_2d(el[1], c)]))
-     for el in steepest_spill_pairs]
+    for el in steepest_spill_pairs]
     ws_pair_heights = sorted(ws_pair_heights)
     spill_heights = np.asarray([el[1] for el in ws_pair_heights])
 
@@ -819,7 +825,40 @@ def remove_ix_from_conn_mat(conn_mat, ix):
     return conn_mat
 
 
-def remove_watersheds_below_threshold(watersheds, conn_mat, size_of_traps, threshold_size):
+def get_threshold_traps(watersheds, size_of_traps, threshold, heights):
+
+    r, c = np.shape(heights)
+
+    keep_indices = np.where(size_of_traps > threshold)[0]
+
+    # The traps of the watershed above the threshold
+    traps = []
+    for i in keep_indices:
+        ws = watersheds[i]
+        ws_2d = map_1d_to_2d(ws, c)
+        trap = ws[np.where(heights[ws_2d] <= size_of_traps[i])[0]]
+        traps.append(trap)
+
+    return traps
+
+
+def get_all_traps(watersheds, heights, spill_heights):
+
+    r, c = np.shape(heights)
+
+    traps = []
+    for i in range(len(watersheds)):
+        ws = watersheds[i]
+        ws_2d = map_1d_to_2d(ws, c)
+        trap = ws[np.where(heights[ws_2d] <= spill_heights[i])[0]]
+        traps.append(trap)
+
+    size_of_traps = np.asarray([len(t) for t in traps])
+
+    return traps, size_of_traps
+
+
+def remove_watersheds_below_threshold(watersheds, conn_mat, size_of_traps, threshold_size, heights, cols):
 
     remove_indices = np.where(size_of_traps < threshold_size)[0]
     it = 0
