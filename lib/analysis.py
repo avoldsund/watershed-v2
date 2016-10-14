@@ -113,51 +113,90 @@ def get_rivers_between_spill_points(watersheds, heights, steepest_spill_pairs, s
 
 
 def get_rivers(watersheds, new_watersheds, steepest_spill_pairs, traps, downslope_indices, heights):
+    """
+    Returns all rivers between traps and from traps and to the boundary
+    :param watersheds: The nodes in the different watersheds
+    :param new_watersheds: The thresholded watersheds
+    :param steepest_spill_pairs: The steepest spill pair for every watershed
+    :param traps: The trap in every watershed
+    :param downslope_indices: The downslope node for all nodes
+    :param heights: Elevations in the landscape
+    :return all_rivers: The rivers between the traps and from traps to the boundary
+    """
 
-    # Note: Assume steepest_spill_pairs is sorted
     rows, cols = np.shape(heights)
+    new_steepest = util.remap_steepest_spill_pairs(new_watersheds, steepest_spill_pairs, rows, cols)
+    new_mapping = util.map_nodes_to_watersheds(new_watersheds, rows, cols)
+    spill_pairs_between_thresholded = [(new_mapping[el[0]], new_mapping[el[1]]) for el in new_steepest]
+
     mapping = util.map_nodes_to_watersheds(watersheds, rows, cols)
     merged_watersheds = [np.unique(mapping[ws]) for ws in new_watersheds]
     all_rivers = []
 
     for i in range(len(merged_watersheds)):  # Iterate over the thresholded watersheds
         # A new river for the watershed
-        river_in_large_ws = []
         small_watersheds = merged_watersheds[i]
         spill_pairs_merged_watersheds = [(mapping[s[0]], mapping[s[1]]) for s in steepest_spill_pairs
                                          if mapping[s[0]] in small_watersheds or mapping[s[1]] in small_watersheds]
 
         # River must go from start to end
         start = [el for el in spill_pairs_merged_watersheds if el[0] not in small_watersheds]
-        if len(start) == 0:  # There is no river flowing across
-            continue
-        else:
-            start = start[0]
+        # Note: There is always a maximum of one end watershed
         end = [el for el in spill_pairs_merged_watersheds if el[1] not in small_watersheds][0]
 
-        G = nx.Graph()
-        G.add_edges_from(spill_pairs_merged_watersheds)
-        river_ws = nx.shortest_path(G, start[0], end[0])
+        # if spill_pairs_between_thresholded[i][1] == -1:  # The watershed is flowing to the boundary
+        #     print i
+        #     print end[0]
+        #     large_river = []
+        #     G = nx.Graph()
+        #     G.add_edges_from(spill_pairs_merged_watersheds)
+        #     river_ws = nx.shortest_path(G, end[0], end[0])
 
-        for j in range(len(river_ws) - 1):  # The watersheds that are part of the river
-            spill_start = steepest_spill_pairs[river_ws[j]][1]
-            spill_end = steepest_spill_pairs[river_ws[j+1]][0]
-            trap_in_ws = traps[river_ws[j+1]]
-            river = []
-            new_river_node = spill_start
-            while new_river_node:
-                river.append(new_river_node)
-                if new_river_node in trap_in_ws:
-                    if j != len(river_ws) - 2:
-                        river_through_trap = get_river_in_trap(trap_in_ws, new_river_node,
-                                                               spill_end, cols)
-                        river.extend(river_through_trap)
-                    new_river_node = False
-                else:
-                    new_river_node = downslope_indices[util.map_1d_to_2d(new_river_node, cols)]
-            river_in_large_ws.extend(river)
+            # for j in range(len(river_ws) - 1):  # The watersheds that are part of the river
+            #     spill_start = steepest_spill_pairs[river_ws[j]][1]
+            #     spill_end = steepest_spill_pairs[river_ws[j + 1]][0]
+            #     trap_in_ws = traps[river_ws[j + 1]]
+            #     river = []
+            #     new_river_node = spill_start
+            #     while new_river_node:
+            #         river.append(new_river_node)
+            #         if new_river_node in trap_in_ws:
+            #             if j != len(river_ws) - 2:
+            #                 river_through_trap = get_river_in_trap(trap_in_ws, new_river_node,
+            #                                                        spill_end, cols)
+            #                 river.extend(river_through_trap)
+            #             new_river_node = False
+            #         else:
+            #             new_river_node = downslope_indices[util.map_1d_to_2d(new_river_node, cols)]
+            #     large_river.extend(river)
+            # print large_river
+            # all_rivers.append(large_river)
 
-        all_rivers.append(river_in_large_ws)
+        for r in range(len(start)):  # A trap might have several rivers flowing to it
+            large_river = []
+            G = nx.Graph()
+            G.add_edges_from(spill_pairs_merged_watersheds)
+            river_ws = nx.shortest_path(G, start[r][0], end[0])
+
+            for j in range(len(river_ws) - 1):  # The watersheds that are part of the river
+                spill_start = steepest_spill_pairs[river_ws[j]][1]
+                spill_end = steepest_spill_pairs[river_ws[j+1]][0]
+                trap_in_ws = traps[river_ws[j+1]]
+                river = []
+                new_river_node = spill_start
+                while new_river_node:
+                    river.append(new_river_node)
+                    if new_river_node in trap_in_ws:
+                        if j != len(river_ws) - 2:
+                            river_through_trap = get_river_in_trap(trap_in_ws, new_river_node,
+                                                                   spill_end, cols)
+                            river.extend(river_through_trap)
+                        new_river_node = False
+                    else:
+                        new_river_node = downslope_indices[util.map_1d_to_2d(new_river_node, cols)]
+                large_river.extend(river)
+
+            all_rivers.append(large_river)
 
     return all_rivers
 

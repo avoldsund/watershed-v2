@@ -13,9 +13,9 @@ file_name = saved_files + 'anders_hoh.tiff'
 
 # Get all watersheds before preprocessing them
 landscape = load_data.get_landscape_tyrifjorden(file_name)
-watersheds = pickle.load(open(saved_files + 'watershedsThreshold500.pkl', 'rb'))
-conn_mat = pickle.load(open(saved_files + 'connMatThreshold500.pkl', 'rb'))
-threshold = 500
+watersheds = pickle.load(open(saved_files + 'watershedsThreshold1000.pkl', 'rb'))
+conn_mat = pickle.load(open(saved_files + 'connMatThreshold1000.pkl', 'rb'))
+threshold = 1000
 
 plot.plot_above_threshold(watersheds, threshold, landscape, 4)
 
