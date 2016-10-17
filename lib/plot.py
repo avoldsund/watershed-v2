@@ -477,36 +477,36 @@ def plot_traps_and_rivers(watersheds, traps, rivers, threshold, landscape, ds):
     color_small = iter(color_hex * (len(watersheds) / 3))
 
     # Plot the watersheds
-    # for i in range(nr_of_watersheds):
-    #     ws = watersheds[i]
-    #     row_col = util.map_1d_to_2d(ws, landscape.nx)
-    #     plt.scatter(landscape.x_min + row_col[1][0::ds] * landscape.step_size,
-    #                 landscape.y_max - row_col[0][0::ds] * landscape.step_size,
-    #                 color=next(color_small), s=2, lw=0, alpha=1)
-##
+    for i in range(nr_of_watersheds):
+        ws = watersheds[i]
+        row_col = util.map_1d_to_2d(ws, landscape.nx)
+        plt.scatter(landscape.x_min + row_col[1][0::ds] * landscape.step_size,
+                    landscape.y_max - row_col[0][0::ds] * landscape.step_size,
+                    color=next(color_small), s=2, lw=0, alpha=1)
+
     # Plot all traps
     for i in range(len(traps)):
         trap = traps[i]
         row_col = util.map_1d_to_2d(trap, landscape.nx)
         plt.scatter(landscape.x_min + row_col[1][0::1] * landscape.step_size,
                     landscape.y_max - row_col[0][0::1] * landscape.step_size,
-                    color='red', s=3, lw=0, alpha=1)
-#
+                    color='#1f78b4', s=3, lw=0, alpha=1)
+
     # Plot the boundary nodes
-    # boundary_pairs = util.get_boundary_pairs_in_watersheds(watersheds, landscape.nx, landscape.ny)
-    # for i in range(nr_of_watersheds):
-    #     b_p = boundary_pairs[i]
-    #     u = np.unique(np.concatenate((b_p[0], b_p[1])))
-    #     row_col = util.map_1d_to_2d(u, landscape.nx)
-    #     plt.scatter(landscape.x_min + row_col[1][0::1] * landscape.step_size,
-    #                 landscape.y_max - row_col[0][0::1] * landscape.step_size,
-    #                 color='black', s=3, lw=0, alpha=1)
+    boundary_pairs = util.get_boundary_pairs_in_watersheds(watersheds, landscape.nx, landscape.ny)
+    for i in range(nr_of_watersheds):
+        b_p = boundary_pairs[i]
+        u = np.unique(np.concatenate((b_p[0], b_p[1])))
+        row_col = util.map_1d_to_2d(u, landscape.nx)
+        plt.scatter(landscape.x_min + row_col[1][0::1] * landscape.step_size,
+                    landscape.y_max - row_col[0][0::1] * landscape.step_size,
+                    color='black', s=3, lw=0, alpha=1)
 
     # Plot rivers
     row_col = util.map_1d_to_2d(rivers, landscape.nx)
     plt.scatter(landscape.x_min + row_col[1][0::1] * landscape.step_size,
                 landscape.y_max - row_col[0][0::1] * landscape.step_size,
-                color='gold', s=5, lw=0, alpha=1)
+                color='#a6cee3', s=5, lw=0, alpha=1)
 
     plt.title('The traps and the rivers of the watersheds with over %s cells in the landscape' % str(threshold))
     font = {'family': 'normal',
