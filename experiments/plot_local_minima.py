@@ -1,16 +1,19 @@
-from lib import plot, load_data, util
-import numpy as np
-import matplotlib.pyplot as plt
+import os
+from lib import load_data, plot, util
 import time
+from scipy.sparse import csr_matrix, find
+import numpy as np
+from scipy import sparse, io
+import cPickle as pickle
 
-file_name = '/home/anderovo/Dropbox/watershedLargeFiles/anders_hoh.tiff'
-landscape = load_data.get_landscape_tyrifjorden(file_name)
+"""
+Plot the landscape in two dimensions
+"""
 
-start = time.time()
-util.fill_single_cell_depressions(landscape.heights, landscape.interior_nx, landscape.interior_ny)
-end = time.time()
-print end-start
+saved_files = '/home/anderovo/Dropbox/watershedLargeFiles/'
+landscape = pickle.load(open(saved_files + 'landscape.pkl', 'rb'))
 
-plt.show()
+flow_dir = util.get_flow_directions(landscape.heights, landscape.step_size, landscape.ny, landscape.nx)
+minima = np.where(flow_dir == -1)[0]
 
-
+plot.plot_local_minima(minima, landscape)
