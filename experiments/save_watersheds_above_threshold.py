@@ -34,7 +34,7 @@ all_traps = pickle.load(open(saved_files + 'allTraps.pkl', 'rb'))
 size_of_traps = pickle.load(open(saved_files + 'sizeOfTraps.pkl', 'rb'))
 
 # Remove watersheds below the threshold
-threshold = 250
+threshold = 25
 start = time.time()
 conn_mat_after_thresholding, watersheds_after_thresholding = util.remove_watersheds_below_threshold(
     watersheds, conn_mat, size_of_traps, threshold, landscape.heights, landscape.total_nodes)
@@ -42,5 +42,5 @@ end = time.time()
 print end-start
 
 # Save the new connMat and watersheds
-pickle.dump(conn_mat_after_thresholding, open('connMatThreshold250.pkl', 'wb'))
-pickle.dump(watersheds_after_thresholding, open('watershedsThreshold250.pkl', 'wb'))
+pickle.dump(conn_mat_after_thresholding, open('connMatThreshold25.pkl', 'wb'))
+pickle.dump(watersheds_after_thresholding, open('watershedsThreshold25.pkl', 'wb'))

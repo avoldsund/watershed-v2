@@ -348,7 +348,6 @@ def combine_minima(local_minima, rows, cols):
     :return combined_minima: List of arrays containing the combined minima
     """
 
-    # local_minima = (rows, cols)
     local_minima_2d = map_1d_to_2d(local_minima, cols)
     one = (local_minima_2d[0] - 1, local_minima_2d[1] + 1)
     two = (local_minima_2d[0], local_minima_2d[1] + 1)
@@ -367,7 +366,7 @@ def combine_minima(local_minima, rows, cols):
     nbrs_are_minima = np.where(np.in1d(nbrs_to_minima_1d, local_minima))[0]
     to_min = nbrs_to_minima_1d[nbrs_are_minima]
     from_min = from_min[nbrs_are_minima]
-    data = np.ones(len(to_min))
+    data = np.ones(len(to_min), dtype=int)
 
     # Make connectivity matrix between pairs of minima
     conn = csr_matrix((data, (from_min, to_min)), shape=(rows*cols, rows*cols), dtype=int)
@@ -802,29 +801,6 @@ def remap_steepest_spill_pairs(watersheds, steepest_spill_pairs, rows, cols):
     return steepest_spill_pairs
 
 
-def remove_ix_from_conn_mat(conn_mat, ix):
-    """
-    Remove indicated index from connectivity matrix. Reroute all connections.
-    :param conn_mat: Connectivity between watersheds
-    :param ix: Watershed below threshold to be removed
-    :return conn_mat: The new connectivity matrix with index removed
-    """
-
-    nr_of_watersheds = conn_mat.shape[0]
-    keep_indices = np.concatenate((np.arange(0, ix, 1, dtype=int), np.arange(ix+1, nr_of_watersheds, 1, dtype=int)))
-    downslope_indices = conn_mat[ix, :].nonzero()[1]  # Only one
-    upslope_indices = conn_mat[:, ix].nonzero()[0]  # Might be several
-
-    # Reroute before remove
-    if len(downslope_indices) and len(upslope_indices):
-        conn_mat[upslope_indices, downslope_indices] = 1
-
-    conn_mat = conn_mat[keep_indices, :]  # Keep rows
-    conn_mat = conn_mat[:, keep_indices]  # Keep cols
-
-    return conn_mat
-
-
 def get_threshold_traps(watersheds, size_of_traps, threshold, heights):
 
     r, c = np.shape(heights)
@@ -858,7 +834,7 @@ def get_all_traps(watersheds, heights, spill_heights):
     return traps, size_of_traps
 
 
-def remove_watersheds_below_threshold(watersheds, conn_mat, size_of_traps, threshold_size, heights, cols):
+def remove_watersheds_below_threshold(watersheds, conn_mat, size_of_traps, threshold_size):
 
     remove_indices = np.where(size_of_traps < threshold_size)[0]
     it = 0
@@ -882,6 +858,29 @@ def remove_watersheds_below_threshold(watersheds, conn_mat, size_of_traps, thres
             it += 1
 
     return conn_mat, watersheds
+
+
+def remove_ix_from_conn_mat(conn_mat, ix):
+    """
+    Remove indicated index from connectivity matrix. Reroute all connections.
+    :param conn_mat: Connectivity between watersheds
+    :param ix: Watershed below threshold to be removed
+    :return conn_mat: The new connectivity matrix with index removed
+    """
+
+    nr_of_watersheds = conn_mat.shape[0]
+    keep_indices = np.concatenate((np.arange(0, ix, 1, dtype=int), np.arange(ix+1, nr_of_watersheds, 1, dtype=int)))
+    downslope_indices = conn_mat[ix, :].nonzero()[1]  # Only one
+    upslope_indices = conn_mat[:, ix].nonzero()[0]  # Might be several
+
+    # Reroute before remove
+    if len(downslope_indices) and len(upslope_indices):
+        conn_mat[upslope_indices, downslope_indices] = 1
+
+    conn_mat = conn_mat[keep_indices, :]  # Keep rows
+    conn_mat = conn_mat[:, keep_indices]  # Keep cols
+
+    return conn_mat
 
 
 def merge_watersheds(watersheds, steepest, nx, ny):

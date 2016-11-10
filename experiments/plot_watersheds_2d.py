@@ -13,4 +13,5 @@ steepest = pickle.load(open(saved_files + 'steepestSpillPairs.pkl', 'rb'))
 
 watersheds = util.merge_watersheds(watersheds, steepest, landscape.nx, landscape.ny)
 
-plot.plot_watersheds_2d(watersheds, landscape, 8)
+plot.plot_watersheds_2d(watersheds, landscape, 4)
+# plot.plot_watersheds_before_thresholding(watersheds, landscape, 4)

@@ -7,11 +7,10 @@ Plot the landscape in two dimensions
 """
 
 saved_files = '/home/anderovo/Dropbox/watershedLargeFiles/'
-file_name = saved_files + 'anders_hoh.tiff'
 
 # Get all watersheds before preprocessing them
-landscape = load_data.get_landscape_tyrifjorden(file_name)
-watersheds = pickle.load(open(saved_files + 'watershedsThreshold0.pkl', 'rb'))
+landscape = pickle.load(open(saved_files + 'landscape.pkl', 'rb'))
+watersheds = pickle.load(open(saved_files + 'watersheds.pkl', 'rb'))
 steepest = pickle.load(open(saved_files + 'steepestSpillPairs.pkl', 'rb'))
 
 # Merge the watersheds that spill into each other (connected components)

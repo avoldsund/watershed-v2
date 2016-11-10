@@ -752,7 +752,8 @@ def test_remove_watersheds_below_threshold():
                          np.array([31, 41, 42]),
                          np.array([43, 44, 45, 46, 24, 25, 26, 34, 35, 36])]
     # Notice that 47 and 48 were removed in the result_watersheds
-    new_conn_mat, watersheds = util.remove_watersheds_below_threshold(watersheds, conn_mat, size_of_traps, threshold_size)
+    new_conn_mat, watersheds = util.remove_watersheds_below_threshold(watersheds, conn_mat,
+                                                                      size_of_traps, threshold_size)
 
     assert np.array_equal(new_conn_mat.todense(), result_conn_mat.todense()) \
            and compare_methods.compare_watersheds(watersheds, result_watersheds)

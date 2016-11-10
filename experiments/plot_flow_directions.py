@@ -1,19 +1,15 @@
-from lib import load_data, plot, util
-from matplotlib import pyplot as plt
-from matplotlib import colors
-import numpy as np
+from lib import plot, util
 import seaborn as sns; sns.set()
-from matplotlib.colors import LinearSegmentedColormap
+import cPickle as pickle
 
 """
-Plot the landscape in two dimensions
+Plot the flow directions
 """
 
 saved_files = '/home/anderovo/Dropbox/watershedLargeFiles/'
-file_name = saved_files + 'anders_hoh.tiff'
-landscape = load_data.get_landscape_tyrifjorden(file_name)
+landscape = pickle.load(open(saved_files + 'landscape.pkl', 'rb'))
 
 flow_directions = util.get_flow_directions(landscape.heights, landscape.step_size,
-                                           landscape.interior_ny, landscape.interior_nx)
+                                           landscape.ny, landscape.nx)
 
-plot.plot_flow_directions(flow_directions, landscape)
+plot.plot_flow_directions(flow_directions[1:-1, 1:-1])

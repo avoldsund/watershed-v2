@@ -14,6 +14,7 @@ saved_files = '/home/anderovo/Dropbox/watershedLargeFiles/'
 landscape = pickle.load(open(saved_files + 'landscape.pkl', 'rb'))
 
 flow_dir = util.get_flow_directions(landscape.heights, landscape.step_size, landscape.ny, landscape.nx)
-minima = np.where(flow_dir == -1)[0]
+minima = (flow_dir == -1).astype(int)
+print minima
 
 plot.plot_local_minima(minima, landscape)

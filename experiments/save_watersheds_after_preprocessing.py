@@ -9,10 +9,10 @@ Save the watersheds after preprocessing
 """
 
 saved_files = '/home/anderovo/Dropbox/watershedLargeFiles/'
-# file_name = saved_files + 'anders_hoh.tiff'
+file_name = saved_files + 'anders_hoh.tiff'
 
 # Save the landscape with depressions filled
-# landscape = load_data.get_landscape_tyrifjorden(file_name)
+landscape = load_data.get_landscape_tyrifjorden(file_name)
 # landscape.heights = util.fill_single_cell_depressions(landscape.heights, landscape.ny, landscape.nx)
 # pickle.dump(landscape, open('landscape.pkl', 'wb'))
 # Load the landscape with the depressions filled

@@ -17,7 +17,8 @@ conn_mat = pickle.load(open(saved_files + 'connMatThreshold1000.pkl', 'rb'))
 
 # Find watershed nr of interest
 # Vaelern (1700, 1400)
-w_nr = util.get_watershed_nr_by_rc(watersheds, landscape, 2000, 2000)
+# Tyrifjorden (2000, 2000)
+w_nr = util.get_watershed_nr_by_rc(watersheds, landscape, 1700, 1400)
 upslope_indices, node_levels = analysis.get_upslope_watersheds(conn_mat, w_nr)
 downslope_indices = analysis.get_downslope_watersheds(conn_mat, w_nr)
 

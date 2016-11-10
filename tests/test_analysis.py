@@ -26,6 +26,7 @@ def test_get_upslope_watersheds_no_upslope():
     w_nr = 5
     result_upslope_watersheds = [5]
 
+    # Note that node_levels is None if there is no upslope
     upslope_watersheds, node_levels = analysis.get_upslope_watersheds(conn_mat, w_nr)
 
     assert sorted(upslope_watersheds) == sorted(result_upslope_watersheds)
@@ -59,10 +60,10 @@ def test_get_downslope_watersheds_no_downslope():
     assert sorted(downslope_watersheds) == sorted(result_downslope_watersheds)
 
 
-def test_get_rivers_between_spill_points():
+def test_get_rivers():
 
     heights = np.array([[10, 10, 10, 10, 10, 10, 10, 10],
-                        [10, 6, 5, 6, 10, 1, 0, 0],
+                        [10, 6, 5, 6, 10, 1, 0, 1.5],
                         [10, 8, 7, 8, 10, 1, 1, 10],
                         [10, 7, 7, 7, 10, 1.5, 1.5, 10],
                         [10, 6, 6, 6, 10, 2, 2, 10],
@@ -73,6 +74,9 @@ def test_get_rivers_between_spill_points():
                   np.array([25, 26, 27, 33, 34, 35, 41, 42, 43, 49, 50, 51]),
                   np.array([12, 13, 14, 20, 21, 22, 28, 29, 30, 36, 37, 38,
                             44, 45, 46, 52, 53, 54])]
+    traps = [np.array([9, 10, 11, 18]),
+             np.array([42, 49, 50, 51]),
+             np.array([13, 14, 21, 22, 29, 30])]
     spill_heights = np.array([7, 4, 1.5])
     flow_direction_indices = np.array([[None, None, None, None, None, None, None, None],
                                        [None, 10, -1, 10, 13, 14, -1, None],
@@ -80,14 +84,16 @@ def test_get_rivers_between_spill_points():
                                        [None, 33, 34, 35, 29, 21, 22, None],
                                        [None, 42, 42, 42, 37, 29, 30, None],
                                        [None, 50, 50, 50, 45, 37, 38, None],
-                                       [None, 50, -1, 50, 53, 45, 46, None],
+                                       [None, 50, -1, 50, 45, 45, 46, None],
                                        [None, None, None, None, None, None, None, None]])
 
     steepest_spill_pairs = [(18, 26), (51, 52), (14, -1)]
-    result_rivers = np.array([26, 34, 52, 53, 45, 37])
+    result_rivers = np.array([26, 34, 52, 45, 37])
 
-    rivers = analysis.get_rivers_between_spill_points(watersheds, heights, steepest_spill_pairs,
-                                                      spill_heights, flow_direction_indices)
+    new_watersheds = list(watersheds)
+    rivers = analysis.get_rivers(watersheds, new_watersheds, steepest_spill_pairs,
+                                 traps, flow_direction_indices, heights)
+    rivers = np.concatenate(rivers)
 
     assert np.array_equal(rivers, result_rivers)
 
