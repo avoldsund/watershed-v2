@@ -1,5 +1,5 @@
 
-from lib import load_data, plot, util, analysis
+from lib import load_data, plot, util, river_analysis
 import cPickle as pickle
 import numpy as np
 

@@ -1,4 +1,4 @@
-from lib import load_data, util, analysis, plot
+from lib import load_data, util, river_analysis, plot
 import numpy as np
 import time
 
@@ -54,8 +54,8 @@ end = time.time()
 print 'Time for thresholding: ', end-start
 
 start = time.time()
-all_rivers = analysis.get_rivers(old_watersheds, new_watersheds, steepest_spill_pairs, all_traps,
-                                 flow_directions, landscape.heights)
+all_rivers = river_analysis.get_rivers(old_watersheds, new_watersheds, steepest_spill_pairs, all_traps,
+                                       flow_directions, landscape.heights)
 end = time.time()
 print 'Time for calculating rivers: ', end-start
 thresholded_traps = [all_traps[i] for i in range(len(all_traps)) if size_of_traps[i] > threshold]

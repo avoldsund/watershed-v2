@@ -1,4 +1,4 @@
-from lib import util, compare_methods, analysis
+from lib import util, compare_methods, river_analysis
 import numpy as np
 from scipy.sparse import csr_matrix
 
@@ -12,7 +12,7 @@ def test_get_upslope_watersheds():
     w_nr = 8
     result_upslope_watersheds = [8, 4, 1, 2, 3, 0]
 
-    upslope_watersheds, node_levels = analysis.get_upslope_watersheds(conn_mat, w_nr)
+    upslope_watersheds, node_levels = river_analysis.get_upslope_watersheds(conn_mat, w_nr)
 
     assert sorted(upslope_watersheds) == sorted(result_upslope_watersheds)
 
@@ -27,7 +27,7 @@ def test_get_upslope_watersheds_no_upslope():
     result_upslope_watersheds = [5]
 
     # Note that node_levels is None if there is no upslope
-    upslope_watersheds, node_levels = analysis.get_upslope_watersheds(conn_mat, w_nr)
+    upslope_watersheds, node_levels = river_analysis.get_upslope_watersheds(conn_mat, w_nr)
 
     assert sorted(upslope_watersheds) == sorted(result_upslope_watersheds)
 
@@ -41,7 +41,7 @@ def test_get_downslope_watersheds():
     w_nr = 0
     result_downslope_watersheds = [0, 3, 1, 4, 8, 7]
 
-    downslope_watersheds = analysis.get_downslope_watersheds(conn_mat, w_nr)
+    downslope_watersheds = river_analysis.get_downslope_watersheds(conn_mat, w_nr)
 
     assert sorted(downslope_watersheds) == sorted(result_downslope_watersheds)
 
@@ -55,7 +55,7 @@ def test_get_downslope_watersheds_no_downslope():
     w_nr = 6
     result_downslope_watersheds = [6]
 
-    downslope_watersheds = analysis.get_downslope_watersheds(conn_mat, w_nr)
+    downslope_watersheds = river_analysis.get_downslope_watersheds(conn_mat, w_nr)
 
     assert sorted(downslope_watersheds) == sorted(result_downslope_watersheds)
 
@@ -91,8 +91,8 @@ def test_get_rivers():
     result_rivers = np.array([26, 34, 52, 45, 37])
 
     new_watersheds = list(watersheds)
-    rivers = analysis.get_rivers(watersheds, new_watersheds, steepest_spill_pairs,
-                                 traps, flow_direction_indices, heights)
+    rivers = river_analysis.get_rivers(watersheds, new_watersheds, steepest_spill_pairs,
+                                       traps, flow_direction_indices, heights)
     rivers = np.concatenate(rivers)
 
     assert np.array_equal(rivers, result_rivers)
@@ -106,7 +106,7 @@ def test_get_river_in_trap():
     end_of_crossing = 34
     result_river = np.array([13, 20, 27, 34])
 
-    river = analysis.get_river_in_trap(trap, start_of_crossing, end_of_crossing, cols)
+    river = river_analysis.get_river_in_trap(trap, start_of_crossing, end_of_crossing, cols)
 
     assert np.array_equal(river, result_river)
 
@@ -121,7 +121,7 @@ def test_get_river_in_trap_advanced():
     end_of_crossing = 51
     result_river = np.array([46, 37, 29, 21, 13, 23, 32, 41, 51])
 
-    river = analysis.get_river_in_trap(trap, start_of_crossing, end_of_crossing, cols)
+    river = river_analysis.get_river_in_trap(trap, start_of_crossing, end_of_crossing, cols)
     print river
     assert np.array_equal(river, result_river)
 
@@ -136,6 +136,6 @@ def test_get_river_in_trap_advanced_2():
     end_of_crossing = 15
     result_river = np.array([47, 38, 29, 21, 13, 14, 15])
 
-    river = analysis.get_river_in_trap(trap, start_of_crossing, end_of_crossing, cols)
+    river = river_analysis.get_river_in_trap(trap, start_of_crossing, end_of_crossing, cols)
 
     assert np.array_equal(river, result_river)

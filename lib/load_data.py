@@ -94,27 +94,9 @@ def get_landscape_tyrifjorden(file_name):
     return landscape
 
 
-def get_smaller_test_landscape(file_name):
+def get_smallest_test_landscape_tyrifjorden(file_name):
 
-    data_set = load_ds(file_name)
-    heights = get_array_from_band(data_set)
-    heights = heights[0:-1, 1:]
-    heights = heights[0:500, 0:500]
-
-    landscape = Landscape(data_set)
-    landscape.heights = heights
-    landscape.nx = 500
-    landscape.ny = 500
-    landscape.x_min += landscape.step_size
-    landscape.y_min -= landscape.step_size * 3500
-    landscape.total_nodes = landscape.nx * landscape.ny
-
-    return landscape
-
-
-def get_smallest_test_landscape(file_name):
-
-    size = 1000
+    size = 500
     data_set = load_ds(file_name)
     heights = get_array_from_band(data_set)
     heights = heights[0:-1, 1:]
@@ -125,7 +107,25 @@ def get_smallest_test_landscape(file_name):
     landscape.nx = size
     landscape.ny = size
     landscape.x_min += landscape.step_size
-    landscape.y_min -= landscape.step_size * (4000 - size)
+    landscape.y_min -= landscape.step_size * (landscape.nx - size)
+    landscape.total_nodes = landscape.nx * landscape.ny
+
+    return landscape
+
+
+def get_smallest_test_landscape(file_name):
+
+    size = 5000
+    data_set = load_ds(file_name)
+    heights = get_array_from_band(data_set)
+    heights = heights[0:size, 0:size]
+
+    landscape = Landscape(data_set)
+    landscape.heights = heights
+    landscape.nx = size
+    landscape.ny = size
+    landscape.x_min += landscape.step_size
+    landscape.y_min -= landscape.step_size * (landscape.nx - size)
     landscape.total_nodes = landscape.nx * landscape.ny
 
     return landscape

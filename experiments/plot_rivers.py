@@ -1,5 +1,5 @@
 
-from lib import plot, analysis
+from lib import plot, river_analysis
 import cPickle as pickle
 import numpy as np
 
@@ -27,8 +27,8 @@ thresholded_traps = [all_traps[i] for i in range(len(all_traps)) if size_of_trap
 # plot.plot_traps_and_rivers(watersheds, all_traps, rivers, landscape, 1)
 
 # Plot rivers after thresholding
-all_rivers = analysis.get_rivers(watersheds, thresholded_watersheds, steepest_spill_pairs, all_traps,
-                                 flow_directions, landscape.heights)
+all_rivers = river_analysis.get_rivers(watersheds, thresholded_watersheds, steepest_spill_pairs, all_traps,
+                                       flow_directions, landscape.heights)
 if len(all_rivers) > 0:
     all_rivers = np.concatenate(all_rivers)
 

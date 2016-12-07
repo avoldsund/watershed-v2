@@ -81,6 +81,15 @@ def get_downslope_watersheds(conn_mat, ws_nr):
 
 
 def get_all_rivers_before_thresholding(watersheds, heights, steepest_spill_pairs, spill_heights, flow_direction_indices):
+    """
+    Find all rivers for the watersheds
+    :param watersheds: The different watersheds
+    :param heights: Heights of landscape
+    :param steepest_spill_pairs: Steepest spill pairs for each watershed
+    :param spill_heights: Heights of the steepest spill pairs
+    :param flow_direction_indices: Indices of the flow directions
+    :return rivers: All river nodes
+    """
 
     r, c = np.shape(heights)
     mapping = util.map_nodes_to_watersheds(watersheds, r, c)

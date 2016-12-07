@@ -1,5 +1,5 @@
 
-from lib import plot, analysis, util
+from lib import plot, river_analysis, util
 import cPickle as pickle
 import numpy as np
 
@@ -22,8 +22,8 @@ index_of_ws = 8
 threshold = 2500
 thresholded_traps = [all_traps[i] for i in range(len(all_traps)) if size_of_traps[i] > threshold]
 
-all_rivers = analysis.get_rivers(watersheds, [thresholded_watersheds[index_of_ws]], steepest_spill_pairs, all_traps,
-                                 flow_directions, landscape.heights)
+all_rivers = river_analysis.get_rivers(watersheds, [thresholded_watersheds[index_of_ws]], steepest_spill_pairs, all_traps,
+                                       flow_directions, landscape.heights)
 
 if len(all_rivers) > 0:
     all_rivers = np.concatenate(all_rivers)
