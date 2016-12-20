@@ -139,3 +139,310 @@ def test_get_river_in_trap_advanced_2():
     river = river_analysis.get_river_in_trap(trap, start_of_crossing, end_of_crossing, cols)
 
     assert np.array_equal(river, result_river)
+
+
+def test_calculate_flow_origins():
+    # Note that trap 36 is flowing to 18, and not to 9
+
+    rows = 6
+    cols = 6
+    row = np.array([36, 37, 19, 20, 21, 14, 15, 22, 28, 9, 38])
+    col = np.array([18, 22, 38, 38, 38, 15, 37, 28, 38, 37, 31])
+    data = np.array([1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1])
+    traps = [np.array([7, 8, 13]), np.array([10, 16]), np.array([25, 26, 27])]
+
+    nr_of_traps = 3
+    nr_of_nodes = rows * cols
+    size_with_trap_nodes = nr_of_traps + nr_of_nodes
+
+    expanded_conn_mat = csr_matrix((data, (row, col)), shape=(size_with_trap_nodes, size_with_trap_nodes))
+
+    start_nodes = river_analysis.calculate_flow_origins(expanded_conn_mat, traps, rows, cols)
+    print start_nodes
+    result_start_nodes = np.array([9, 14, 19, 20, 21, 36])
+
+    assert np.array_equal(start_nodes, result_start_nodes)
+
+
+"""
+def test_calculate_nr_of_upslope_cells_river():
+
+    depressionless_heights = np.array([[5, 5, 5],
+                                       [5, 4, 5],
+                                       [5, 3, 5],
+                                       [5, 2, 5],
+                                       [5, 1, 5],
+                                       [5, 0, 5]])
+    step_size = 10
+
+    row = np.array([4, 7, 10])
+    col = np.array([7, 10, 13])
+    data = np.array([1, 1, 1])
+    node_conn_mat = csr_matrix((data, (row, col)), shape=(18, 18))
+    steepest_spill_pairs = []
+
+    result_flow_acc = np.array([[None, None, None],
+                                [None, 1, None],
+                                [None, 2, None],
+                                [None, 3, None],
+                                [None, 4, None],
+                                [None, None, None]])
+
+    flow_acc = river_analysis.calculate_nr_of_upslope_cells(depressionless_heights, steepest_spill_pairs,
+                                                            node_conn_mat, step_size)
+
+    assert np.array_equal(flow_acc, result_flow_acc)
+
+
+def test_calculate_nr_of_upslope_cells():
+
+    depressionless_heights = np.array([[5, 5, 5],
+                                       [5, 3, 5],
+                                       [5, 3, 5],
+                                       [5, 2, 5],
+                                       [5, 2, 5],
+                                       [5, 1, 5]])
+
+    row = np.array([7])
+    col = np.array([10])
+    data = np.array([1])
+
+    node_conn_mat = csr_matrix((data, (row, col)), shape=(18, 18))
+
+    step_size = 10
+    traps = [np.array([10, 13]), np.array([4])]
+    steepest_spill_pairs = [(13, 16), (4, 7)]
+
+    result_flow_acc = np.array([[None, None, None],
+                                [None, 1, None],
+                                [None, 2, None],
+                                [None, 4, None],
+                                [None, 4, None],
+                                [None, None, None]])
+
+    flow_acc = river_analysis.calculate_nr_of_upslope_cells(depressionless_heights, steepest_spill_pairs, node_conn_mat, step_size)
+
+    assert np.array_equal(flow_acc, result_flow_acc)
+
+
+def test_calculate_nr_of_upslope_cells_larger():
+
+    depressionless_heights = np.array([[5, 5, 5, 5, 5],
+                                       [5, 5, 5, 5, 5],
+                                       [5, 3, 2.5, 2.7, 5],
+                                       [5, 4, 2.3, 2.4, 5],
+                                       [5, 5, 2.3, 5, 5]])
+
+    row = np.array([6, 7, 8, 11, 12, 13, 16, 18])
+    col = np.array([11, 12, 13, 12, 17, 18, 17, 17])
+    data = np.array([1, 1, 1, 1, 1, 1, 1, 1])
+
+    node_conn_mat = csr_matrix((data, (row, col)), shape=(25, 25))
+
+    step_size = 10
+    traps = [np.array([10, 13]), np.array([4])]
+    spill_points = [(13, 16), (4, 7)]
+    steepest_spill_pairs = []
+
+    result_flow_acc = np.array([[None, None, None, None, None],
+                                [None, 1, 1, 1, None],
+                                [None, 2, 4, 2, None],
+                                [None, 1, 9, 3, None],
+                                [None, None, None, None, None]])
+
+    flow_acc = river_analysis.calculate_nr_of_upslope_cells(depressionless_heights, steepest_spill_pairs, node_conn_mat, step_size)
+
+    assert np.array_equal(flow_acc, result_flow_acc)
+
+"""
+
+def test_calculate_nr_of_upslope_cells_three_traps():
+
+    depressionless_heights = np.array([[10, 10, 10, 10, 10, 10],
+                                       [10, 9, 9, 9, 7, 10],
+                                       [10, 9, 10, 9, 7, 10],
+                                       [10, 10, 10, 10, 7, 10],
+                                       [10, 4, 4, 4, 4.5, 10],
+                                       [10, 4, 10, 10, 10, 10]])
+
+    row = np.array([9, 14, 15, 22, 28, 19, 20, 21])
+    col = np.array([10, 15, 16, 28, 27, 25, 26, 27])
+    data = np.array([1, 1, 1, 1, 1, 1, 1, 1])
+    total_nodes = 36
+
+    node_conn_mat = csr_matrix((data, (row, col)), shape=(total_nodes, total_nodes))
+    steepest_spill_pairs = [(8, 9), (16, 22), (26, 31)]
+
+    traps = [np.array([7, 8, 13]), np.array([10, 16]), np.array([25, 26, 27])]
+
+    result_flow_acc = np.array([[0, 0, 0, 0, 0, 0],
+                                [0, 3, 3, 4, 8, 0],
+                                [0, 3, 1, 2, 8, 0],
+                                [0, 1, 1, 1, 9, 0],
+                                [0, 16, 16, 16, 10, 0],
+                                [0, 0, 0, 0, 0, 0]])
+
+    flow_acc = river_analysis.calculate_nr_of_upslope_cells(node_conn_mat, traps, steepest_spill_pairs)
+
+    assert np.array_equal(flow_acc, result_flow_acc)
+
+
+def test_calculate_nr_of_upslope_cells_three_traps_diverging():
+
+    depressionless_heights = np.array([[10, 10, 10, 10, 10, 10],
+                                       [10, 9, 9, 9, 7, 10],
+                                       [10, 9, 10, 9, 7, 10],
+                                       [10, 10, 10, 10, 7, 10],
+                                       [10, 4, 4, 4, 4.5, 10],
+                                       [10, 4, 10, 10, 10, 10]])
+
+    row = np.array([9, 14, 15, 22, 28, 19, 20, 21])
+    col = np.array([10, 15, 16, 28, 27, 25, 26, 27])
+    data = np.array([1, 1, 1, 1, 1, 1, 1, 1])
+    total_nodes = 36
+
+    node_conn_mat = csr_matrix((data, (row, col)), shape=(total_nodes, total_nodes))
+    steepest_spill_pairs = [(8, 9), (16, 22), (26, 31)]
+
+    traps = [np.array([7, 8, 13]), np.array([10, 16]), np.array([25, 26, 27])]
+
+    result_flow_acc = np.array([[0, 0, 0, 0, 0, 0],
+                                [0, 3, 3, 4, 8, 0],
+                                [0, 3, 1, 2, 8, 0],
+                                [0, 1, 1, 1, 9, 0],
+                                [0, 16, 16, 16, 10, 0],
+                                [0, 0, 0, 0, 0, 0]])
+
+    flow_acc = river_analysis.calculate_nr_of_upslope_cells(node_conn_mat, traps, steepest_spill_pairs)
+
+    assert np.array_equal(flow_acc, result_flow_acc)
+
+
+def test_expand_conn_mat_basic():
+
+    row = np.array([1, 2])
+    col = np.array([2, 3])
+    data = np.array([1, 1])
+    total_nodes = 4
+    conn_mat = csr_matrix((data, (row, col)), shape=(total_nodes, total_nodes))
+
+    nr_of_traps = 2
+    result_expanded_conn_mat = csr_matrix((data, (row, col)), shape=(total_nodes + nr_of_traps,
+                                                                     total_nodes + nr_of_traps))
+
+    expanded_conn_mat = river_analysis.expand_conn_mat(conn_mat, nr_of_traps)
+
+    assert np.array_equal(expanded_conn_mat.todense(), result_expanded_conn_mat.todense())
+
+
+def test_expand_conn_mat():
+
+    row = np.array([9, 14, 15, 22, 28, 19, 20, 21])
+    col = np.array([10, 15, 16, 28, 27, 25, 26, 27])
+    data = np.array([1, 1, 1, 1, 1, 1, 1, 1])
+    total_nodes = 36
+    conn_mat = csr_matrix((data, (row, col)), shape=(total_nodes, total_nodes))
+
+    traps = 3
+    result_node_conn_mat = csr_matrix((data, (row, col)), shape=(total_nodes + traps, total_nodes + traps))
+
+    node_conn_mat = river_analysis.expand_conn_mat(conn_mat, traps)
+
+    assert np.array_equal(node_conn_mat.todense(), result_node_conn_mat.todense())
+
+
+def test_reroute_trap_connections():
+
+    # NB: Flow to boundary has been removed for this method
+    # Input to function
+    row = np.array([9, 14, 15, 22, 28, 19, 20, 21])
+    col = np.array([10, 15, 16, 28, 27, 25, 26, 27])
+    data = np.array([1, 1, 1, 1, 1, 1, 1, 1])
+    nr_of_traps = 3
+    nr_of_nodes = 36
+    size_with_trap_nodes = nr_of_traps + nr_of_nodes
+    conn_mat = csr_matrix((data, (row, col)), shape=(size_with_trap_nodes, size_with_trap_nodes))
+    steepest_spill_pairs = [(8, 9), (16, 22), (26, 31)]
+    traps = [np.array([7, 8, 13]), np.array([10, 16]), np.array([25, 26, 27])]
+
+    # Result
+    row = np.array([36, 37, 19, 20, 21, 14, 15, 22, 28, 9])
+    col = np.array([9, 22, 38, 38, 38, 15, 37, 28, 38, 37])
+    data = np.array([1, 1, 1, 1, 1, 1, 1, 1, 1, 1])
+    result_conn_mat = csr_matrix((data, (row, col)), shape=(size_with_trap_nodes, size_with_trap_nodes))
+
+    new_conn_mat = river_analysis.reroute_trap_connections(conn_mat, traps, steepest_spill_pairs)
+
+    assert np.array_equal(new_conn_mat.todense(), result_conn_mat.todense())
+
+
+def test_reroute_trap_connections_two_directions():
+
+    # Input to function
+    row = np.array([9, 14, 15, 22, 28, 19, 20, 21])
+    col = np.array([10, 15, 16, 28, 27, 25, 26, 27])
+    data = np.array([1, 1, 1, 1, 1, 1, 1, 1])
+    nr_of_traps = 3
+    nr_of_nodes = 36
+    size_with_trap_nodes = nr_of_traps + nr_of_nodes
+    conn_mat = csr_matrix((data, (row, col)), shape=(size_with_trap_nodes, size_with_trap_nodes))
+    steepest_spill_pairs = [(13, 18), (16, 22), (26, 31)]
+    traps = [np.array([7, 8, 13]), np.array([10, 16]), np.array([25, 26, 27])]
+
+    # Result
+    row = np.array([37, 19, 20, 21, 14, 15, 22, 28, 9])
+    col = np.array([22, 38, 38, 38, 15, 37, 28, 38, 37])
+    data = np.array([1, 1, 1, 1, 1, 1, 1, 1, 1])
+    result_conn_mat = csr_matrix((data, (row, col)), shape=(size_with_trap_nodes, size_with_trap_nodes))
+
+    new_conn_mat = river_analysis.reroute_trap_connections(conn_mat, traps, steepest_spill_pairs)
+
+    assert np.array_equal(new_conn_mat.todense(), result_conn_mat.todense())
+
+
+def test_assign_initial_flow_acc():
+
+    rows = 6
+    cols = 6
+    traps = [np.array([7, 8, 13]), np.array([10, 16]), np.array([25, 26, 27])]
+    start_nodes = np.array([9, 14, 19, 20, 21, 36])
+
+    result_initial_flow_acc = np.array([0, 0, 0, 0, 0, 0,
+                                        0, 0, 0, 1, 0, 0,
+                                        0, 0, 1, 0, 0, 0,
+                                        0, 1, 1, 1, 0, 0,
+                                        0, 0, 0, 0, 0, 0,
+                                        0, 0, 0, 0, 0, 0,
+                                        3, 0, 0])
+    result_one_or_trap_size = np.array([1, 1, 1, 1, 1, 1,
+                                        1, 1, 1, 1, 1, 1,
+                                        1, 1, 1, 1, 1, 1,
+                                        1, 1, 1, 1, 1, 1,
+                                        1, 1, 1, 1, 1, 1,
+                                        1, 1, 1, 1, 1, 1,
+                                        3, 2, 3])
+
+    initial_flow_acc, one_or_trap_size = river_analysis.assign_initial_flow_acc(traps, start_nodes, rows, cols)
+    print result_one_or_trap_size
+    print one_or_trap_size
+    assert np.array_equal(initial_flow_acc, result_initial_flow_acc) and \
+           np.array_equal(one_or_trap_size, result_one_or_trap_size)
+
+
+def test_get_trap_boundary():
+
+    nx = 8
+    ny = 7
+    traps = [np.array([9, 10, 17]),
+             np.array([12, 13, 14, 20, 21, 22, 28, 29, 30]),
+             np.array([26, 34]),
+             np.array([44])]
+
+    result_traps_boundary = [np.array([9, 10, 17]),
+                             np.array([12, 13, 14, 20, 22, 28, 29, 30]),
+                             np.array([26, 34]),
+                             np.array([44])]
+
+    traps_boundaries = river_analysis.get_traps_boundaries(traps, nx, ny)
+
+    assert compare_methods.compare_two_lists_of_arrays(traps_boundaries, result_traps_boundary)
