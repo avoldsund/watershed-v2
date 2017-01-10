@@ -247,7 +247,7 @@ def test_get_flow_directions_float():
     assert np.array_equal(flow_directions, result_pos_flow_directions)
 
 
-def test_get_flow_direction_indices():
+def test_get_flow_direction_indices_one():
 
     rows = 5
     cols = 6
@@ -266,6 +266,48 @@ def test_get_flow_direction_indices():
     flow_direction_indices = util.get_flow_direction_indices(heights, step_size, rows, cols)
 
     assert np.array_equal(flow_direction_indices, result_flow_direction_indices)
+
+
+def test_get_flow_direction_indices_two():
+
+    rows = 5
+    cols = 5
+    step_size = 10
+    heights = np.array([[1, 2, 2, 2, 2],
+                        [2, 1, 2, 1, 2],
+                        [3, 3, 3, 1, 2],
+                        [3, 3, 3, 2, 2],
+                        [3, 3, 3, 2, 2]])
+
+    result_flow_direction_indices = np.array([[None, None, None, None, None],
+                                              [None, -1, 8, -1, None],
+                                              [None, 6, 13, -1, None],
+                                              [None, -1, 13, 13, None],
+                                              [None, None, None, None, None]])
+    flow_direction_indices = util.get_flow_direction_indices(heights, step_size, rows, cols)
+
+    assert np.array_equal(flow_direction_indices, result_flow_direction_indices)
+
+
+def test_make_sparse_node_conn_matrix():
+
+    flow_direction_indices = np.array([[None, None, None, None, None],
+                                       [None, 12, 12, 13, None],
+                                       [None, 12, 16, 18, None],
+                                       [None, -1, 16, -1, None],
+                                       [None, None, None, None, None]])
+    rows = 5
+    cols = 5
+
+    row = np.array([6, 7, 8, 11, 12, 13, 17])
+    col = np.array([12, 12, 13, 12, 16, 18, 16])
+    data = np.ones(len(row), dtype=int)
+
+    result_node_conn_mat = csr_matrix((data, (row, col)), shape=(rows * cols, rows * cols))
+
+    node_conn_mat = util.make_sparse_node_conn_matrix(flow_direction_indices, rows, cols)
+
+    assert np.array_equal(node_conn_mat.todense(), result_node_conn_mat.todense())
 
 
 def test_remove_out_of_boundary_flow():
@@ -901,3 +943,49 @@ def test_remove_ix_from_conn_mat_both_upslope_and_downslope():
     new_conn_mat = util.remove_ix_from_conn_mat(conn_mat, remove_ix)
 
     assert np.array_equal(new_conn_mat.todense(), result_conn_mat.todense())
+
+
+def test_make_depressionless_one():
+
+    step_size = 10
+    heights = np.array([[5, 5, 5, 5, 5, 5, 5],
+                        [5, 1, 1, 1, 1, 1, 5],
+                        [5, 1, 2, 2, 2, 1, 5],
+                        [5, 1, 2, 0, 2, 1, 5],
+                        [5, 1, 2, 2, 2, 1, 5],
+                        [5, 1, 1, 1, 1, 1, 5],
+                        [5, 5, 5, 5, 5, 5, 5]])
+
+    result_heights = np.array([[5, 5, 5, 5, 5, 5, 5],
+                               [5, 5, 5, 5, 5, 5, 5],
+                               [5, 5, 5, 5, 5, 5, 5],
+                               [5, 5, 5, 5, 5, 5, 5],
+                               [5, 5, 5, 5, 5, 5, 5],
+                               [5, 5, 5, 5, 5, 5, 5],
+                               [5, 5, 5, 5, 5, 5, 5]])
+
+    new_heights = util.make_depressionless(heights, step_size)
+
+    assert np.array_equal(new_heights, result_heights)
+
+
+def test_make_depressionless_two():
+
+    step_size = 10
+    heights = np.array([[4, 4, 4],
+                        [4, 3, 4],
+                        [4, 2, 4],
+                        [4, 1, 4],
+                        [4, 2, 4]])
+
+    result_heights = np.array([[4, 4, 4],
+                               [4, 3, 4],
+                               [4, 2, 4],
+                               [4, 2, 4],
+                               [4, 2, 4]])
+
+    new_heights = util.make_depressionless(heights, step_size)
+    print 'New_heights: ', new_heights
+    print 'Result_heights: ', result_heights
+
+    assert np.array_equal(new_heights, result_heights)

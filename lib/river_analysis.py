@@ -4,6 +4,7 @@ from scipy.sparse import csr_matrix, lil_matrix, identity, csgraph, identity
 import numpy as np
 from math import sqrt
 import time
+from collections import Counter
 
 
 def get_upslope_watersheds(conn_mat, ws_nr):
@@ -218,51 +219,66 @@ def get_river_in_trap(trap, start, end, cols):
     return river
 
 
-def calculate_nr_of_upslope_cells(node_conn_mat, traps, steepest_spill_pairs):
+def calculate_nr_of_upslope_cells(node_conn_mat, rows, cols, traps, steepest_spill_pairs):
+    """
+    Calculate the nr of upslope cells for all nodes in the landscape. Returns a 2D-array with a number
+    indicating the nr of upslope cells for each coordinate.
+    :param node_conn_mat: Based on downslope nodes. How the nodes are connected.
+    :param rows: Nr of rows in landscape
+    :param cols: Nr of cols in landscape
+    :param traps: All traps in landscape
+    :param steepest_spill_pairs: Steepest spill pairs for each watershed
+    :return flow_acc: Accumulated flow for each node
+    """
 
-    rows, cols = node_conn_mat._shape
     # Retrieve the expanded connectivity matrix with traps as nodes
     node_conn_mat = expand_conn_mat(node_conn_mat, len(traps))
-    expanded_conn_mat = reroute_trap_connections(node_conn_mat, traps, steepest_spill_pairs)
+    conn_mat = reroute_trap_connections(node_conn_mat, rows, cols, traps, steepest_spill_pairs)
 
     # The flow starts in the start_cells. These are the cells without flow leading in to them
-    start_nodes = calculate_flow_origins(expanded_conn_mat, traps, sqrt(rows), sqrt(cols))
-    flow_acc, one_or_trap_size = assign_initial_flow_acc(traps, start_nodes, sqrt(rows), sqrt(cols))
-    indices_with_next, next_nodes = expanded_conn_mat[start_nodes, :].nonzero()
+    start_nodes = calculate_flow_origins(conn_mat, traps, rows, cols)
+    flow_acc, one_or_trap_size = assign_initial_flow_acc(traps, start_nodes, rows, cols)
+    _, next_nodes = conn_mat[start_nodes, :].nonzero()
+    next_nodes = np.unique(next_nodes)
 
     it = 0
-    while len(next_nodes) > 0:
+    current_nodes = next_nodes
+    while len(current_nodes) > 0:
         print 'Iteration: ', it
-        # For each next node, check if flow is defined for all upslope nodes
-        next_nodes_unique = np.unique(next_nodes)
-        prev_nodes, prev_flowing_to = expanded_conn_mat[:, next_nodes_unique].nonzero()
-        valid = flow_acc[prev_nodes] > 0
-        remove_indices_of_nodes = prev_flowing_to[valid == False]
 
-        nodes_getting_flow_acc = np.setdiff1d(next_nodes_unique, next_nodes_unique[remove_indices_of_nodes])
+        # Current nodes cannot be assigned flow without previous nodes having flow assigned
+        previous_nodes, corr_current_index = conn_mat[:, current_nodes].nonzero()
+        _, flow_to_each_current = np.unique(corr_current_index, return_counts=True)
+        previous_nodes_with_flow = flow_acc[previous_nodes] > 0
+        remove_indices = corr_current_index[previous_nodes_with_flow == False]
+        keep_indices = np.setdiff1d(np.arange(0, len(current_nodes), 1), remove_indices)
+        sorting_order = np.argsort(corr_current_index)
+        previous_nodes = previous_nodes[sorting_order]
+        assign_flow_indices = np.setdiff1d(current_nodes, current_nodes[remove_indices])
 
-        # If there are no nodes in nodes_getting_flow_acc, we are done
-        if len(nodes_getting_flow_acc) > 0:
-            for i in range(len(nodes_getting_flow_acc)):
-                node_getting_flow = nodes_getting_flow_acc[i]
-                flow_to_node = expanded_conn_mat[:, node_getting_flow].nonzero()[0]
-                flow_acc[node_getting_flow] = one_or_trap_size[node_getting_flow] + np.sum(flow_acc[flow_to_node])
-            indices_with_next_one, next_nodes_from_assigned = expanded_conn_mat[nodes_getting_flow_acc, :].nonzero()
-            if len(remove_indices_of_nodes) > 0:
-                indices_with_next_two, next_nodes_from_unassigned = expanded_conn_mat[remove_indices_of_nodes, :].nonzero()
-                next_nodes = np.hstack((next_nodes_from_assigned, next_nodes_from_unassigned))
-            else:
-                next_nodes = next_nodes_from_assigned
+        # Calculate flow to current nodes having previous nodes with assigned flow
+        splits = np.cumsum(flow_to_each_current)
+        nodes_to_each_current = np.split(previous_nodes, splits)[:-1]
+        flow_to_each_current = np.asarray([np.sum(flow_acc[el]) for el in nodes_to_each_current])
+        flow_acc[current_nodes[keep_indices]] = flow_to_each_current[keep_indices]
+        # Add one or the trap size
+        flow_acc[assign_flow_indices] += one_or_trap_size[assign_flow_indices]
+
+        if len(assign_flow_indices) > 0:
+            _, next_nodes = conn_mat[assign_flow_indices, :].nonzero()
+            next_nodes = np.unique(next_nodes)
+            unassigned_current_nodes = current_nodes[remove_indices]
+            current_nodes = np.union1d(next_nodes, unassigned_current_nodes)
         else:
-            print 'Before breeeeeeeeeeak: ', nodes_getting_flow_acc
-            break
+            current_nodes = []
         it += 1
 
+    # Map from trap nodes back to traps
     for i in range(len(traps)):
         trap = traps[i]
-        flow_acc[trap] = flow_acc[rows + i]
-    flow_acc = flow_acc[:rows]
-    flow_acc = flow_acc.reshape(sqrt(rows), sqrt(cols))
+        flow_acc[trap] = flow_acc[rows * cols + i]
+    flow_acc = flow_acc[:rows * cols]
+    flow_acc = flow_acc.reshape(rows, cols)
 
     return flow_acc
 
@@ -283,65 +299,51 @@ def expand_conn_mat(conn_mat, nr_of_traps):
     return expanded_mat
 
 
-def reroute_trap_connections(trap_node_conn_mat, traps, steepest_spill_pairs):
-    """
-    Turns all traps into a single node so that the flow is defined in the entire grid.
-    NB: Flow to boundary is removed
-    :param trap_node_conn_mat: Initial conn. matrix between nodes before adding trap nodes and rerouting connections
-    :param traps: All traps in the landscape
-    :param steepest_spill_pairs: The steepest spill pairs to all traps
-    :return trap_node_conn_mat: Updated connectivity matrix
+def reroute_trap_connections(conn_mat, rows, cols, traps, steepest_spill_pairs):
     """
 
-    r, c = np.shape(trap_node_conn_mat)
+    :param conn_mat:
+    :param traps:
+    :param steepest_spill_pairs:
+    :return:
+    """
 
-    # Set trap's downslope to the spill point
+    # rows and cols is the original size (nx x ny)
+    r, c = np.shape(conn_mat)
+
+    # Add the connections: trap_nodes -> downslope_indices
     trap_indices = np.arange(r - len(traps), r, 1)
     downslope_indices = np.asarray([el[1] for el in steepest_spill_pairs])
-    trap_node_conn_mat[trap_indices, downslope_indices] = 1
+    add_conn_from_trap_nodes = csr_matrix((np.ones(len(trap_indices), dtype=int), (trap_indices, downslope_indices)), shape=(r, c))
+    conn_mat = conn_mat + add_conn_from_trap_nodes
 
-    # Get trap boundary
-    trap_boundary = get_traps_boundaries(traps, sqrt(c), sqrt(r))
-    print 'trap_boundary[9]: ', trap_boundary[9]
-    # Get all indices flowing to traps, and to which they flow
-    #print len(traps)
-    #print [len(t) for t in traps]
-    indices_flowing_to_traps = trap_node_conn_mat[:, trap_boundary[9]].nonzero()
-    print indices_flowing_to_traps
-    nr_of_nonzero_per_column = np.diff(trap_node_conn_mat.tocsc().indptr)
-    print traps[9]
-    print np.intersect1d(traps[9], indices_flowing_to_traps)
-    nr_of_nodes_to_each_trap = [(nr_of_nonzero_per_column[traps[i]]) for i in range(len(traps))]
-    #print nr_of_nodes_to_each_trap
-    #print sum(nr_of_nodes_to_each_trap)
+    # Add the connections: nodes_to_trap -> trap_nodes
+    trap_boundaries = np.concatenate(get_traps_boundaries(traps, cols, rows))
+    conn_node_to_trap = conn_mat[:, trap_boundaries].nonzero()
+    nodes_to_trap = conn_node_to_trap[0]
+
+    # Get nodes_to_trap's corresponding trap indices
+    nr_of_nonzero_per_column = np.diff(conn_mat.tocsc().indptr)
+    nr_of_nodes_to_each_trap = [np.sum(nr_of_nonzero_per_column[traps[i]]) for i in range(len(traps))]
     trap_indices = np.concatenate([[r - len(traps) + i] * nr_of_nodes_to_each_trap[i]
                                    for i in range(len(traps))]).astype(int)
+    add_conn_to_trap_nodes = csr_matrix(((np.ones(len(nodes_to_trap), dtype=int)), (nodes_to_trap, trap_indices)), shape=(r, c))
+    conn_mat = conn_mat + add_conn_to_trap_nodes
 
-    assert len(trap_indices) == len(indices_flowing_to_traps)
+    # Remove the connections: nodes_to_trap -> nodes_in_trap
+    nodes_in_trap = trap_boundaries[conn_node_to_trap[1]]
+    remove_conn_to_traps = csr_matrix((np.ones(len(nodes_to_trap), dtype=int) * -1, (nodes_to_trap, nodes_in_trap)), shape=(r, c))
+    conn_mat = conn_mat + remove_conn_to_traps
 
-    # Create new sparse matrix
-    trap_node_conn_mat = trap_node_conn_mat.tolil()
-    start = time.time()
-    print 'len(indices_flowing_to_traps): ', len(indices_flowing_to_traps)
-    trap_node_conn_mat[indices_flowing_to_traps, :] = 0
-    end = time.time()
-
-    print 'trap_node_conn_mat[indices_flowing_to_traps, :] = 0: ', end-start
-
-    start = time.time()
-
-    print 'len(trap_indices)', len(trap_indices)
-    trap_node_conn_mat[indices_flowing_to_traps, trap_indices] = 1
-    end = time.time()
-    print 'trap_node_conn_mat[indices_flowing_to_traps, trap_indices] = 1: ', end-start
-    print 'c'
     # Remove flow out of boundary
-    domain_boundary = util.get_domain_boundary_indices(sqrt(c - len(traps)), sqrt(r - len(traps)))
-    trap_node_conn_mat[:, domain_boundary] = 0
+    domain_boundary = util.get_domain_boundary_indices(cols, rows)
+    conn_nodes_to_boundary = conn_mat[:, domain_boundary].nonzero()
+    nodes_to_boundary = conn_nodes_to_boundary[0]
+    boundary_nodes = domain_boundary[conn_nodes_to_boundary[1]]
+    remove_conn_to_boundary = csr_matrix(((np.ones(len(nodes_to_boundary), dtype=int) * -1), (nodes_to_boundary, boundary_nodes)), shape=(r, c))
+    conn_mat = conn_mat + remove_conn_to_boundary
 
-    trap_node_conn_mat = trap_node_conn_mat.tocsr()
-
-    return trap_node_conn_mat
+    return conn_mat
 
 
 def calculate_flow_origins(expanded_conn_mat, traps, rows, cols):

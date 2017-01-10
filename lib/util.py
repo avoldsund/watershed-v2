@@ -6,6 +6,7 @@ import networkx
 import time
 import matplotlib.pyplot as plt
 from operator import itemgetter
+import cPickle as pickle
 
 
 def get_watershed_nr_by_rc(watersheds, landscape, r, c):
@@ -87,10 +88,10 @@ def get_neighbor_indices(indices, cols):
 
 def get_domain_boundary_indices(cols, rows):
 
-    top = np.arange(0, cols, 1)
-    bottom = np.arange(cols * rows - cols, cols * rows, 1)
-    left = np.arange(cols, cols * rows - cols, cols)
-    right = np.arange(2 * cols - 1, cols * rows - 1, cols)
+    top = np.arange(0, cols, 1, dtype=int)
+    bottom = np.arange(cols * rows - cols, cols * rows, 1, dtype=int)
+    left = np.arange(cols, cols * rows - cols, cols, dtype=int)
+    right = np.arange(2 * cols - 1, cols * rows - 1, cols, dtype=int)
 
     boundary_indices = np.concatenate((top, bottom, left, right))
     boundary_indices.sort()
@@ -165,6 +166,31 @@ def get_flow_directions(heights, step_size, rows, cols):
     return flow_directions
 
 
+def make_sparse_node_conn_matrix(flow_direction_indices, rows, cols):
+    """
+    Returns a sparse connectivity matrix for the nodes using information about flow directions
+    :param flow_direction_indices: 2D-array of flow directions in the grid
+    :param rows: Nr of rows in grid
+    :param cols: Nr of cols in grid
+    :return node_conn_mat: Sparse node connectivity matrix
+    """
+
+    flow_to = np.reshape(flow_direction_indices, rows * cols)
+
+    # Remove -1 and None indices
+    indices = np.arange(0, rows * cols, 1)
+    keep_indices = flow_to > 0
+
+    # Data for csr-matrix
+    flow_from = indices[keep_indices]
+    flow_to = flow_to[keep_indices]
+    data = np.ones(len(flow_from), dtype=int)
+
+    node_conn_mat = csr_matrix((data, (flow_from, flow_to)), shape=(rows * cols, rows * cols))
+
+    return node_conn_mat
+
+
 def remove_out_of_boundary_flow(flow_directions):
     """
     Replaces flow out of the boundary by flagging node as minimum/flat area (-1)
@@ -209,6 +235,9 @@ def get_flow_direction_indices(heights, step_size, rows, cols):
     flow_directions = get_flow_directions(heights, step_size, rows, cols)
     remove_out_of_boundary_flow(flow_directions)
 
+    # Copy flow directions, and write to that array
+    flow_direction_indices = np.copy(flow_directions)
+
     values = [1, 2, 4, 8, 16, 32, 64, 128]
     translations = [-cols + 1, 1, cols + 1, cols, cols - 1, -1, -cols - 1, -cols]
 
@@ -217,9 +246,9 @@ def get_flow_direction_indices(heights, step_size, rows, cols):
         if len(coords[0]) > 0:
             from_ix = coords[0] * cols + coords[1]
             to_ix = from_ix + translations[ix]
-            flow_directions[coords] = to_ix
+            flow_direction_indices[coords] = to_ix
 
-    return flow_directions
+    return flow_direction_indices
 
 
 def map_2d_to_1d(coords, cols):
@@ -348,7 +377,11 @@ def combine_minima(local_minima, rows, cols):
     :return combined_minima: List of arrays containing the combined minima
     """
 
+    if len(local_minima) == 1:  # One minimum returns list with one minimum combination
+        return [local_minima]
+
     local_minima_2d = map_1d_to_2d(local_minima, cols)
+
     one = (local_minima_2d[0] - 1, local_minima_2d[1] + 1)
     two = (local_minima_2d[0], local_minima_2d[1] + 1)
     four = local_minima_2d[0] + 1, local_minima_2d[1] + 1
@@ -379,9 +412,10 @@ def combine_minima(local_minima, rows, cols):
 
     combined_minima = [ws for ws in nodes_in_comb_min if len(ws) > 1]
 
-    already_located_minima = np.concatenate(combined_minima)
-    remaining_minima = np.setdiff1d(local_minima, already_located_minima)
-    [combined_minima.append(np.array([remaining_minima[i]])) for i in range(len(remaining_minima))]
+    if len(combined_minima) > 0:
+        already_located_minima = np.concatenate(combined_minima)
+        remaining_minima = np.setdiff1d(local_minima, already_located_minima)
+        [combined_minima.append(np.array([remaining_minima[i]])) for i in range(len(remaining_minima))]
 
     return combined_minima
 
@@ -717,9 +751,10 @@ def combine_watersheds_spilling_into_each_other(watersheds, heights):
 
     # Order the steepest spill pairs
     mapping = map_nodes_to_watersheds(watersheds, ny, nx)
-    steepest_spill_pairs = list(steepest_spill_pairs)
-    order = np.argsort([mapping[s[0]] for s in steepest_spill_pairs])
-    steepest_spill_pairs = [steepest_spill_pairs[el] for el in order]
+    if steepest_spill_pairs:
+        steepest_spill_pairs = list(steepest_spill_pairs)
+        order = np.argsort([mapping[s[0]] for s in steepest_spill_pairs])
+        steepest_spill_pairs = [steepest_spill_pairs[el] for el in order]
 
     return watersheds, steepest_spill_pairs
 
@@ -765,11 +800,13 @@ def get_spill_heights(watersheds, heights, steepest_spill_pairs):
     :return spill_heights: The spill height for each watershed
     """
 
+    if not steepest_spill_pairs:
+        return None
     r, c = np.shape(heights)
     mapping = map_nodes_to_watersheds(watersheds, r, c)
 
     ws_pair_heights = [((mapping[el[0]], mapping[el[1]]), max(heights[map_1d_to_2d(el[0], c)], heights[map_1d_to_2d(el[1], c)]))
-    for el in steepest_spill_pairs]
+                       for el in steepest_spill_pairs]
     ws_pair_heights = sorted(ws_pair_heights)
     spill_heights = np.asarray([el[1] for el in ws_pair_heights])
 
@@ -934,3 +971,87 @@ def create_watershed_conn_matrix(watersheds, steepest_spill_pairs, rows, cols):
     conn_mat = csr_matrix((data, (row_indices, col_indices)), shape=(nr_of_watersheds, nr_of_watersheds))
 
     return conn_mat
+
+
+def calculate_watersheds(heights, dim_x, dim_y, step_size):
+    """
+    Given information about grid and heights, the watersheds are calculated. Information about spill points are used to
+    merge watersheds spilling into each other.
+    :param heights: The elevations for the grid points. The landscape must have single-cell depressions filled!
+    :param dim_x: Size of grid in x-dimension
+    :param dim_y: Size of grid in y-dimension
+    :param step_size: Length between points in one dimension
+    :return:
+    """
+
+    flow_directions = get_flow_direction_indices(heights, step_size, dim_y, dim_x)
+    node_endpoints = get_node_endpoints(flow_directions)
+    local_watersheds = get_local_watersheds(node_endpoints)
+    local_minima = np.asarray(local_watersheds.keys())
+    combined_minima = combine_minima(local_minima, dim_y, dim_x)
+    watersheds = combine_watersheds(local_watersheds, combined_minima)
+    watersheds, steepest_spill_pairs = combine_watersheds_spilling_into_each_other(watersheds, heights)
+
+    return watersheds, steepest_spill_pairs, flow_directions
+
+
+def calculate_thresholded_watersheds(watersheds, steepest_spill_pairs, landscape, threshold):
+    """
+    Returns the thresholded watersheds
+    :param watersheds: All watersheds in the domain
+    :param steepest_spill_pairs: The spill pairs between all watersheds
+    :param landscape: Landscape object
+    :param threshold: The algorithm removes or merges all watersheds with traps below the threshold
+    :return new_watersheds: The thresholded watersheds
+    """
+
+    conn_mat = create_watershed_conn_matrix(watersheds, steepest_spill_pairs, landscape.ny, landscape.nx)
+    spill_heights = get_spill_heights(watersheds, landscape.heights, steepest_spill_pairs)
+    traps, size_of_traps = get_all_traps(watersheds, landscape.heights, spill_heights)
+    new_conn_mat, new_watersheds = remove_watersheds_below_threshold(watersheds, conn_mat, size_of_traps, threshold)
+
+    return new_watersheds
+
+
+def make_landscape_depressionless(watersheds, steepest_spill_pairs, landscape):
+    """
+    Makes the landscape depressionless by filling the traps to the spill heights. It is important that watersheds
+    spilling into each other have been combined. The result is a monotonically decreasing landscape.
+    :param watersheds: All watersheds in the domain
+    :param steepest_spill_pairs: The spill pairs for all watersheds
+    :param landscape: Landscape object
+    :return: Nothing. It only modifies landscape.heights.
+    """
+
+    spill_heights = get_spill_heights(watersheds, landscape.heights, steepest_spill_pairs)
+    traps, size_of_traps = get_all_traps(watersheds, landscape.heights, spill_heights)
+
+    for i in range(len(traps)):
+        landscape.heights[map_1d_to_2d(np.asarray(traps[i]), landscape.ny)] = spill_heights[i]
+
+
+def make_depressionless(heights, step_size):
+    """
+    Given only heights and step_size, calculate the depressionless landscape
+    :param heights: Heights of domain
+    :param step_size: Step size between grid points, assume regular grid
+    :return heights: The new heights with depressions filled
+    """
+
+    ny, nx = np.shape(heights)
+    fill_single_cell_depressions(heights, ny, nx)
+    flow_directions = get_flow_direction_indices(heights, step_size, ny, nx)
+    node_endpoints = get_node_endpoints(flow_directions)
+    local_watersheds = get_local_watersheds(node_endpoints)
+    local_minima = np.asarray(local_watersheds.keys())
+    combined_minima = combine_minima(local_minima, ny, nx)
+    watersheds = combine_watersheds(local_watersheds, combined_minima)
+    watersheds, steepest_spill_pairs = combine_watersheds_spilling_into_each_other(watersheds, heights)
+
+    spill_heights = get_spill_heights(watersheds, heights, steepest_spill_pairs)
+    traps, size_of_traps = get_all_traps(watersheds, heights, spill_heights)
+
+    for i in range(len(traps)):
+        heights[map_1d_to_2d(np.asarray(traps[i]), nx)] = spill_heights[i]
+
+    return heights
