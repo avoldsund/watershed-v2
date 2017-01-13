@@ -47,7 +47,6 @@ def get_upslope_watersheds(conn_mat, ws_nr):
         visited_ws.extend(new_upslope_ws)
 
     upslope_watersheds = visited_ws
-    print upslope_watersheds
 
     return upslope_watersheds, node_levels
 
@@ -241,11 +240,11 @@ def calculate_nr_of_upslope_cells(node_conn_mat, rows, cols, traps, steepest_spi
     _, next_nodes = conn_mat[start_nodes, :].nonzero()
     next_nodes = np.unique(next_nodes)
 
-    it = 0
     current_nodes = next_nodes
+    it = 0
+
     while len(current_nodes) > 0:
         print 'Iteration: ', it
-
         # Current nodes cannot be assigned flow without previous nodes having flow assigned
         previous_nodes, corr_current_index = conn_mat[:, current_nodes].nonzero()
         _, flow_to_each_current = np.unique(corr_current_index, return_counts=True)
@@ -263,20 +262,21 @@ def calculate_nr_of_upslope_cells(node_conn_mat, rows, cols, traps, steepest_spi
         flow_acc[current_nodes[keep_indices]] = flow_to_each_current[keep_indices]
         # Add one or the trap size
         flow_acc[assign_flow_indices] += one_or_trap_size[assign_flow_indices]
-
+        it += 1
         if len(assign_flow_indices) > 0:
             _, next_nodes = conn_mat[assign_flow_indices, :].nonzero()
             next_nodes = np.unique(next_nodes)
             unassigned_current_nodes = current_nodes[remove_indices]
             current_nodes = np.union1d(next_nodes, unassigned_current_nodes)
+
         else:
             current_nodes = []
-        it += 1
 
     # Map from trap nodes back to traps
     for i in range(len(traps)):
         trap = traps[i]
         flow_acc[trap] = flow_acc[rows * cols + i]
+
     flow_acc = flow_acc[:rows * cols]
     flow_acc = flow_acc.reshape(rows, cols)
 
@@ -321,17 +321,16 @@ def reroute_trap_connections(conn_mat, rows, cols, traps, steepest_spill_pairs):
     trap_boundaries = np.concatenate(get_traps_boundaries(traps, cols, rows))
     conn_node_to_trap = conn_mat[:, trap_boundaries].nonzero()
     nodes_to_trap = conn_node_to_trap[0]
+    nodes_in_trap = trap_boundaries[conn_node_to_trap[1]]
+    map_nodes_to_trap = util.map_nodes_to_watersheds(traps, rows, cols)
+    trap_nodes = map_nodes_to_trap[nodes_in_trap] + rows * cols
 
     # Get nodes_to_trap's corresponding trap indices
-    nr_of_nonzero_per_column = np.diff(conn_mat.tocsc().indptr)
-    nr_of_nodes_to_each_trap = [np.sum(nr_of_nonzero_per_column[traps[i]]) for i in range(len(traps))]
-    trap_indices = np.concatenate([[r - len(traps) + i] * nr_of_nodes_to_each_trap[i]
-                                   for i in range(len(traps))]).astype(int)
-    add_conn_to_trap_nodes = csr_matrix(((np.ones(len(nodes_to_trap), dtype=int)), (nodes_to_trap, trap_indices)), shape=(r, c))
+    add_conn_to_trap_nodes = csr_matrix(((np.ones(len(nodes_to_trap), dtype=int)), (nodes_to_trap, trap_nodes)), shape=(r, c))
     conn_mat = conn_mat + add_conn_to_trap_nodes
 
     # Remove the connections: nodes_to_trap -> nodes_in_trap
-    nodes_in_trap = trap_boundaries[conn_node_to_trap[1]]
+
     remove_conn_to_traps = csr_matrix((np.ones(len(nodes_to_trap), dtype=int) * -1, (nodes_to_trap, nodes_in_trap)), shape=(r, c))
     conn_mat = conn_mat + remove_conn_to_traps
 
