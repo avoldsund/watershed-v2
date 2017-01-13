@@ -412,7 +412,10 @@ def combine_minima(local_minima, rows, cols):
 
     combined_minima = [ws for ws in nodes_in_comb_min if len(ws) > 1]
 
-    if len(combined_minima) > 0:
+    if len(combined_minima) == 0:
+        combined_minima = [np.array([m]) for m in local_minima]
+        return combined_minima
+    else:  # There are only single minima, so no combinations are created
         already_located_minima = np.concatenate(combined_minima)
         remaining_minima = np.setdiff1d(local_minima, already_located_minima)
         [combined_minima.append(np.array([remaining_minima[i]])) for i in range(len(remaining_minima))]
@@ -641,11 +644,10 @@ def get_steepest_spill_pair(heights, spill_pairs):
     steepest_spill_pairs = [None] * len(spill_pairs)
 
     for i in range(len(spill_pairs)):
-
         diff = abs(spill_pairs[i][0] - spill_pairs[i][1])
         derivatives = np.array([None] * len(spill_pairs[i][0]), dtype=object)
 
-        card_indices = np.where(np.logical_or(diff == 1, diff == cols + 1))[0]
+        card_indices = np.where(np.logical_or(diff == 1, diff == cols))[0]
         diag_indices = np.setdiff1d(np.arange(0, len(spill_pairs[i][0]), 1), card_indices)
         card_der = (heights[spill_pairs[i][0][card_indices]] - heights[spill_pairs[i][1][card_indices]])/10
         diag_der = (heights[spill_pairs[i][0][diag_indices]] - heights[spill_pairs[i][1][diag_indices]])/math.sqrt(200)
