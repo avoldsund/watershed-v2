@@ -309,19 +309,19 @@ def test_calculate_nr_of_upslope_cells_three_traps_diverging():
     cols = 6
 
     node_conn_mat = csr_matrix((data, (row, col)), shape=(total_nodes, total_nodes))
-    steepest_spill_pairs = [(8, 9), (16, 22), (26, 31)]
+    steepest_spill_pairs = [(13, 18), (16, 22), (26, 31)]
 
     traps = [np.array([7, 8, 13]), np.array([10, 16]), np.array([25, 26, 27])]
 
     result_flow_acc = np.array([[0, 0, 0, 0, 0, 0],
-                                [0, 3, 3, 4, 8, 0],
-                                [0, 3, 1, 2, 8, 0],
-                                [0, 1, 1, 1, 9, 0],
-                                [0, 16, 16, 16, 10, 0],
+                                [0, 3, 3, 1, 5, 0],
+                                [0, 3, 1, 2, 5, 0],
+                                [0, 1, 1, 1, 6, 0],
+                                [0, 13, 13, 13, 7, 0],
                                 [0, 0, 0, 0, 0, 0]])
-
+    print 'result_flow_acc: ', result_flow_acc
     flow_acc = river_analysis.calculate_nr_of_upslope_cells(node_conn_mat, rows, cols, traps, steepest_spill_pairs)
-
+    print 'flow_acc: ', flow_acc
     assert np.array_equal(flow_acc, result_flow_acc)
 
 

@@ -411,7 +411,7 @@ def test_combine_watersheds():
     assert compare_methods.compare_watersheds(combined_watersheds, result_combined_watersheds)
 
 
-def test_combine_minima():
+def test_combine_minima_one_combination():
 
     rows = 4
     cols = 4
@@ -421,6 +421,30 @@ def test_combine_minima():
     result_comb_min = util.combine_minima(local_minima, rows, cols)
     for i in range(len(result_comb_min)):
         result_comb_min[i] = sorted(result_comb_min[i])
+
+    assert compare_methods.compare_two_lists_of_arrays(comb_min, result_comb_min)
+
+
+def test_combine_minima_one_min():
+
+    rows = 3
+    cols = 3
+    local_minima = np.array([4])
+
+    comb_min = [np.array([4])]
+    result_comb_min = util.combine_minima(local_minima, rows, cols)
+
+    assert compare_methods.compare_two_lists_of_arrays(comb_min, result_comb_min)
+
+
+def test_combine_minima_two_single_min():
+
+    rows = 5
+    cols = 3
+    local_minima = np.array([4, 10])
+
+    comb_min = [np.array([4]), np.array([10])]
+    result_comb_min = util.combine_minima(local_minima, rows, cols)
 
     assert compare_methods.compare_two_lists_of_arrays(comb_min, result_comb_min)
 
@@ -743,6 +767,26 @@ def test_get_spill_heights():
     assert np.array_equal(spill_heights, result_spill_heights)
 
 
+def test_get_all_traps():
+
+    heights = np.array([[10, 10, 10, 10, 10, 10],
+                        [10, 9, 9, 9, 7, 10],
+                        [10, 9, 10, 9, 7, 10],
+                        [10, 10, 10, 10, 7, 10],
+                        [10, 4, 4, 4, 4.5, 10],
+                        [10, 4, 10, 10, 10, 10]])
+
+    watersheds = [np.array([7, 8, 13]), np.array([9, 10, 14, 15, 16]), np.array([19, 20, 21, 22, 25, 26, 27, 28])]
+    spill_heights = np.array([9, 7, 4])
+    result_traps = [np.array([7, 8, 13]), np.array([10, 16]), np.array([25, 26, 27])]
+    result_size_of_traps = np.array([3, 2, 3])
+
+    traps, size_of_traps = util.get_all_traps(watersheds, heights, spill_heights)
+
+    assert compare_methods.compare_two_lists_of_arrays(traps, result_traps) and \
+           np.array_equal(size_of_traps, result_size_of_traps)
+
+
 def test_get_size_of_traps():
 
     heights = np.array([[4, 10, 10, 10, 10, 10, 10],
@@ -945,47 +989,71 @@ def test_remove_ix_from_conn_mat_both_upslope_and_downslope():
     assert np.array_equal(new_conn_mat.todense(), result_conn_mat.todense())
 
 
-def test_make_depressionless_one():
+def test_make_depressionless_hole():
 
     step_size = 10
-    heights = np.array([[5, 5, 5, 5, 5, 5, 5],
-                        [5, 1, 1, 1, 1, 1, 5],
-                        [5, 1, 2, 2, 2, 1, 5],
-                        [5, 1, 2, 0, 2, 1, 5],
-                        [5, 1, 2, 2, 2, 1, 5],
-                        [5, 1, 1, 1, 1, 1, 5],
-                        [5, 5, 5, 5, 5, 5, 5]])
+    heights = np.array([[5, 5, 5],
+                        [5, 0, 5],
+                        [5, 5, 5]])
 
-    result_heights = np.array([[5, 5, 5, 5, 5, 5, 5],
-                               [5, 5, 5, 5, 5, 5, 5],
-                               [5, 5, 5, 5, 5, 5, 5],
-                               [5, 5, 5, 5, 5, 5, 5],
-                               [5, 5, 5, 5, 5, 5, 5],
-                               [5, 5, 5, 5, 5, 5, 5],
-                               [5, 5, 5, 5, 5, 5, 5]])
+    result_heights = np.array([[5, 5, 5],
+                               [5, 5, 5],
+                               [5, 5, 5]])
 
     new_heights = util.make_depressionless(heights, step_size)
 
     assert np.array_equal(new_heights, result_heights)
 
 
-def test_make_depressionless_two():
+def test_make_depressionless_two_plateaus():
 
     step_size = 10
     heights = np.array([[4, 4, 4],
+                        [4, 0, 4],
                         [4, 3, 4],
-                        [4, 2, 4],
-                        [4, 1, 4],
+                        [4, 0, 4],
                         [4, 2, 4]])
 
     result_heights = np.array([[4, 4, 4],
                                [4, 3, 4],
-                               [4, 2, 4],
+                               [4, 3, 4],
                                [4, 2, 4],
                                [4, 2, 4]])
 
     new_heights = util.make_depressionless(heights, step_size)
-    print 'New_heights: ', new_heights
-    print 'Result_heights: ', result_heights
+
+    assert np.array_equal(new_heights, result_heights)
+
+
+def test_make_depressionless_tower():
+
+    step_size = 10
+    heights = np.array([[5, 5, 5],
+                        [5, 10, 5],
+                        [5, 5, 5]])
+
+    result_heights = np.array([[5, 5, 5],
+                               [5, 10, 5],
+                               [5, 5, 5]])
+
+    new_heights = util.make_depressionless(heights, step_size)
+
+    assert np.array_equal(new_heights, result_heights)
+
+
+def test_make_depressionless_pit():
+
+    step_size = 10
+    heights = np.array([[5, 5, 5, 5],
+                        [5, 0, 1, 5],
+                        [5, 1, 1, 5],
+                        [5, 5, 5, 1]])
+
+    result_heights = np.array([[5, 5, 5, 5],
+                               [5, 1, 1, 5],
+                               [5, 1, 1, 5],
+                               [5, 5, 5, 1]])
+
+    new_heights = util.make_depressionless(heights, step_size)
 
     assert np.array_equal(new_heights, result_heights)
