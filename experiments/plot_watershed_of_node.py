@@ -1,13 +1,14 @@
 from lib import util, river_analysis, load_data, plot
-import cPickle as pickle
 
 """
-Calculates the accumulated flow for each node in the landscape. A node's number is the number of upslope nodes it has.
+Plot the upslope area (watershed) of a single node.
 """
 
 saved_files = '/home/anderovo/Dropbox/watershedLargeFiles/'
 file_name = saved_files + 'anders_hoh.tiff'
 
+
+# Get all necessary information
 landscape = load_data.get_smallest_test_landscape_tyrifjorden(file_name)
 landscape.heights = util.fill_single_cell_depressions(landscape.heights, landscape.ny, landscape.nx)
 watersheds, steepest, flow_dir = util.calculate_watersheds(landscape.heights, landscape.nx, landscape.ny, landscape.step_size)
@@ -21,11 +22,12 @@ for i in range(len(traps)):
     trap_in_2d = util.map_1d_to_2d(traps[i], landscape.nx)
     flow[trap_in_2d] = -1
 
+# Create connections and expand matrix to accommodate trap nodes
 node_conn_mat = util.make_sparse_node_conn_matrix(flow, landscape.ny, landscape.nx)
-upslope_cells = river_analysis.calculate_nr_of_upslope_cells(node_conn_mat, landscape.ny, landscape.nx, traps, steepest)
+node_conn_mat = river_analysis.expand_conn_mat(node_conn_mat, len(traps))
+expanded_conn_mat = river_analysis.reroute_trap_connections(node_conn_mat, landscape.ny, landscape.nx, traps, steepest)
 
-# upslope_cells = pickle.load(open(saved_files + 'upslopeCells.pkl', 'rb'))
-# pickle.dump(upslope_cells, open('upslopeCells.pkl', 'wb'))
-plot.plot_accumulated_flow(upslope_cells)
-# plot.plot_accumulated_flow_above_threshold(upslope_cells)
-
+# Get the watershed of the node and plot it
+node_coords_r_c = (220, 16)
+ws_of_node = river_analysis.get_watershed_of_node(node_coords_r_c, expanded_conn_mat, traps, landscape.ny, landscape.nx)
+plot.plot_watersheds_2d([ws_of_node], landscape, 1)
