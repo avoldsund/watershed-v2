@@ -504,3 +504,86 @@ def test_get_trap_boundary_advanced():
     print 'traps_boundaries: ', traps_boundaries
 
     assert compare_methods.compare_two_lists_of_arrays(traps_boundaries, result_traps_boundary)
+
+
+def test_get_watershed_of_node_in_river():
+
+    node_coords = (4, 4)  # node 28
+
+    traps = [np.array([7, 8, 13]), np.array([10, 16]), np.array([25, 26, 27])]
+    rows = 6
+    cols = 6
+    size_with_trap_nodes = rows * cols + len(traps)
+    row = np.array([37, 19, 20, 21, 14, 15, 22, 28, 9])
+    col = np.array([22, 38, 38, 38, 15, 37, 28, 38, 37])
+    data = np.array([1, 1, 1, 1, 1, 1, 1, 1, 1])
+    expanded_conn_mat = csr_matrix((data, (row, col)), shape=(size_with_trap_nodes, size_with_trap_nodes))
+
+    result_ws_of_node = np.array([9, 10, 14, 15, 16, 22, 28])
+
+    ws_of_node = river_analysis.get_watershed_of_node(node_coords, expanded_conn_mat, traps, rows, cols)
+    ws_of_node = np.sort(ws_of_node)
+
+    assert np.array_equal(ws_of_node, result_ws_of_node)
+
+
+def test_get_watershed_of_node_is_start_node_in_trap():
+
+    node_coords = (1, 1)  # node 7
+
+    traps = [np.array([7, 8, 13]), np.array([10, 16]), np.array([25, 26, 27])]
+    rows = 6
+    cols = 6
+    size_with_trap_nodes = rows * cols + len(traps)
+    row = np.array([37, 19, 20, 21, 14, 15, 22, 28, 9])
+    col = np.array([22, 38, 38, 38, 15, 37, 28, 38, 37])
+    data = np.array([1, 1, 1, 1, 1, 1, 1, 1, 1])
+    expanded_conn_mat = csr_matrix((data, (row, col)), shape=(size_with_trap_nodes, size_with_trap_nodes))
+
+    result_ws_of_node = np.array([7, 8, 13])
+
+    ws_of_node = river_analysis.get_watershed_of_node(node_coords, expanded_conn_mat, traps, rows, cols)
+    ws_of_node = np.sort(ws_of_node)
+
+    assert np.array_equal(ws_of_node, result_ws_of_node)
+
+
+def test_get_watershed_of_node_is_start_node():
+
+    node_coords = (2, 2)  # node 14
+
+    traps = [np.array([7, 8, 13]), np.array([10, 16]), np.array([25, 26, 27])]
+    rows = 6
+    cols = 6
+    size_with_trap_nodes = rows * cols + len(traps)
+    row = np.array([37, 19, 20, 21, 14, 15, 22, 28, 9])
+    col = np.array([22, 38, 38, 38, 15, 37, 28, 38, 37])
+    data = np.array([1, 1, 1, 1, 1, 1, 1, 1, 1])
+    expanded_conn_mat = csr_matrix((data, (row, col)), shape=(size_with_trap_nodes, size_with_trap_nodes))
+
+    result_ws_of_node = np.array([14])
+
+    ws_of_node = river_analysis.get_watershed_of_node(node_coords, expanded_conn_mat, traps, rows, cols)
+    ws_of_node = np.sort(ws_of_node)
+
+    assert np.array_equal(ws_of_node, result_ws_of_node)
+
+
+def test_get_watershed_of_node_not_on_diagonal():
+    node_coords = (3, 1)  # node 19
+
+    traps = [np.array([7, 8, 13]), np.array([10, 16]), np.array([25, 26, 27])]
+    rows = 6
+    cols = 6
+    size_with_trap_nodes = rows * cols + len(traps)
+    row = np.array([37, 19, 20, 21, 14, 15, 22, 28, 9])
+    col = np.array([22, 38, 38, 38, 15, 37, 28, 38, 37])
+    data = np.array([1, 1, 1, 1, 1, 1, 1, 1, 1])
+    expanded_conn_mat = csr_matrix((data, (row, col)), shape=(size_with_trap_nodes, size_with_trap_nodes))
+
+    result_ws_of_node = np.array([19])
+
+    ws_of_node = river_analysis.get_watershed_of_node(node_coords, expanded_conn_mat, traps, rows, cols)
+    ws_of_node = np.sort(ws_of_node)
+
+    assert np.array_equal(ws_of_node, result_ws_of_node)

@@ -1,10 +1,8 @@
 from lib import util
 import networkx as nx
-from scipy.sparse import csr_matrix, lil_matrix, identity, csgraph, identity
+from scipy.sparse import csr_matrix
 import numpy as np
 from math import sqrt
-import time
-from collections import Counter
 
 
 def get_upslope_watersheds(conn_mat, ws_nr):
@@ -260,8 +258,10 @@ def calculate_nr_of_upslope_cells(node_conn_mat, rows, cols, traps, steepest_spi
         nodes_to_each_current = np.split(previous_nodes, splits)[:-1]
         flow_to_each_current = np.asarray([np.sum(flow_acc[el]) for el in nodes_to_each_current])
         flow_acc[current_nodes[keep_indices]] = flow_to_each_current[keep_indices]
+
         # Add one or the trap size
         flow_acc[assign_flow_indices] += one_or_trap_size[assign_flow_indices]
+
         it += 1
         if len(assign_flow_indices) > 0:
             _, next_nodes = conn_mat[assign_flow_indices, :].nonzero()
@@ -301,11 +301,13 @@ def expand_conn_mat(conn_mat, nr_of_traps):
 
 def reroute_trap_connections(conn_mat, rows, cols, traps, steepest_spill_pairs):
     """
-
-    :param conn_mat:
-    :param traps:
-    :param steepest_spill_pairs:
-    :return:
+    Reroute connections going from nodes to traps so that they go to trap nodes instead. Remove the old connection.
+    :param conn_mat: Connectivity matrix between all nodes
+    :param rows: Nr of rows in landscape
+    :param cols: Nr of cols in landscape
+    :param traps: All traps in landscape
+    :param steepest_spill_pairs: Spill pair from each trap
+    :return conn_mat: Updated connectivity matrix
     """
 
     # rows and cols is the original size (nx x ny)
@@ -419,3 +421,45 @@ def get_traps_boundaries(traps, nx, ny):
         trap_boundary.append(trap[node_is_in_trap_boundary])
 
     return trap_boundary
+
+
+def get_watershed_of_node(node_coords_r_c, expanded_conn_mat, traps, r, c):
+    """
+    :param node_coords: The coords for the outlet node
+    :param expanded_conn_mat: Connectivity matrix for nodes and trap nodes
+    :param traps: All traps in landscape
+    :param r: y-dim of landscape
+    :param c: x-dim of landscape
+    :return watershed_of_node: The watershed for the chosen node
+    """
+
+    total_nodes = r * c
+    node_1d = util.map_2d_to_1d((node_coords_r_c[0], node_coords_r_c[1]), c)
+    map_nodes_to_trap = util.map_nodes_to_watersheds(traps, r, c)
+
+    prev_nodes = expanded_conn_mat[:, node_1d].nonzero()[0]
+
+    if len(prev_nodes) == 0:  # No upslope nodes. Return trap if the node is in one, else only return the node
+        node_in_trap_ix = map_nodes_to_trap[node_1d]
+        return traps[node_in_trap_ix] if node_in_trap_ix != -1 else np.array([node_1d])
+    else:
+        watershed_of_node = [np.array([node_1d]), prev_nodes]
+        while prev_nodes.size:  # Upslope nodes are added until there are no more
+            prev_nodes = expanded_conn_mat[:, prev_nodes].nonzero()[0]
+            if prev_nodes.size:  # No empty array is added
+                watershed_of_node.append(prev_nodes)
+
+        watershed_of_node = np.concatenate(watershed_of_node)
+
+        # If there are any trap nodes, map them to traps and add them
+        traps_in_upslope = []
+
+        for j in range(len(watershed_of_node)):
+            if watershed_of_node[j] >= total_nodes:
+                traps_in_upslope.append(traps[watershed_of_node[j] - total_nodes])
+        watershed_of_node = watershed_of_node[watershed_of_node < total_nodes]
+        if len(traps_in_upslope) > 0:
+            traps_in_upslope = np.concatenate(traps_in_upslope)
+            watershed_of_node = np.concatenate((watershed_of_node, traps_in_upslope))
+
+    return watershed_of_node
