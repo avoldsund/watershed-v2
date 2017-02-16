@@ -66,7 +66,7 @@ def plot_landscape_3d(landscape, ds):
     plt.show()
 
 
-def plot_watersheds_2d(watersheds, landscape, ds):
+def plot_watersheds_2d(watersheds, outlet, landscape, ds):
     """
     Plot all watersheds and their boundary nodes
     :param watersheds: List of arrays where each array is a watershed
@@ -79,26 +79,62 @@ def plot_watersheds_2d(watersheds, landscape, ds):
     boundary_pairs = util.get_boundary_pairs_in_watersheds(watersheds, landscape.nx, landscape.ny)
 
     color_hex = ['#e41a1c', '#377eb8', '#4daf4a', '#984ea3', '#ff7f00', '#ffff33', '#a65628', '#f781bf']
-    color_small = iter(color_hex * (len(watersheds)/3))
-
+    if len(watersheds) < 3:
+        color_small = iter(color_hex)
+    else:
+        color_small = iter(color_hex * (len(watersheds)/3))
     fig = plt.figure()
     ax = fig.add_subplot(111, aspect=1)
 
     # Plot the watersheds
     for i in range(nr_of_watersheds):
         row_col = util.map_1d_to_2d(watersheds[i], landscape.nx)
-        plt.scatter(landscape.x_min + row_col[1][0::ds] * landscape.step_size,
-                    landscape.y_max - row_col[0][0::ds] * landscape.step_size,
-                    color=next(color_small), s=2, lw=0, alpha=1)
+        plt.scatter(landscape.x_min + row_col[1][0::ds],
+                    landscape.y_max - row_col[0][0::ds],
+                    color=next(color_small), s=25, lw=0, alpha=1)
 
-    # Plot the boundary nodes
+    # Outlet is of the form (row, col) <-> (y, x)
+    plt.scatter(landscape.x_min + outlet[1], landscape.y_max - outlet[0],
+                color='b', s=25, lw=0, alpha=1)
+
+    # # Plot the boundary nodes
+    # for i in range(nr_of_watersheds):
+    #     b_p = boundary_pairs[i]
+    #     u = np.unique(np.concatenate((b_p[0], b_p[1])))
+    #     row_col = util.map_1d_to_2d(u, landscape.nx)
+    #     plt.scatter(landscape.x_min + row_col[1][0::ds] * landscape.step_size,
+    #                 landscape.y_max - row_col[0][0::ds] * landscape.step_size,
+    #                 color='black', s=2, lw=0, alpha=1)
+
+    ax.axis('off')
+
+    plt.show()
+
+
+def plot_watersheds_2d_coords(watersheds, landscape, ds):
+    """
+    Plot all watersheds and their boundary nodes
+    :param watersheds: List of arrays where each array is a watershed
+    :param landscape: A landscape object holding metadata
+    :param ds: Downsampling factor if only every ds node shall be plotted
+    :return: Plots the watersheds
+    """
+
+    nr_of_watersheds = len(watersheds)
+
+    color_hex = ['#e41a1c', '#377eb8', '#4daf4a', '#984ea3', '#ff7f00', '#ffff33', '#a65628', '#f781bf']
+    if len(watersheds) < 3:
+        color_small = iter(color_hex)
+    else:
+        color_small = iter(color_hex * (len(watersheds)/3))
+    fig = plt.figure()
+    ax = fig.add_subplot(111, aspect=1)
+
+    # Plot the watersheds
     for i in range(nr_of_watersheds):
-        b_p = boundary_pairs[i]
-        u = np.unique(np.concatenate((b_p[0], b_p[1])))
-        row_col = util.map_1d_to_2d(u, landscape.nx)
-        plt.scatter(landscape.x_min + row_col[1][0::ds] * landscape.step_size,
-                    landscape.y_max - row_col[0][0::ds] * landscape.step_size,
-                    color='black', s=2, lw=0, alpha=1)
+        row_col = util.map_1d_to_2d(watersheds[i], landscape.nx)
+        plt.scatter(row_col[1][0::ds], row_col[0][0::ds],
+                    color=next(color_small), s=25, lw=0, alpha=1)
 
     ax.axis('off')
 
@@ -545,3 +581,29 @@ def plot_hillshade(heights):
     plt.axis('off')
 
     plt.show()
+
+
+def plot_accumulated_flow_above_threshold(acc_flow):
+
+    threshold = 1000
+    river_nodes = np.where(acc_flow > threshold)
+
+    plt.scatter(river_nodes[1] * 10, river_nodes[0] * 10, color='black', s=2, lw=0, alpha=1)
+    plt.gca().invert_yaxis()
+    plt.show()
+
+
+def plot_accumulated_flow(acc_flow):
+
+    #rows, cols = np.shape(acc_flow)
+    # threshold = rows * cols * 0.01
+    #river_nodes = np.where(acc_flow > threshold)
+    threshold = 10000
+    river_nodes = np.where(acc_flow > threshold)
+    acc_flow[river_nodes] = threshold
+    plt.imshow(acc_flow, cmap='RdBu_r')
+    plt.colorbar()
+    plt.show()
+    # plt.scatter(river_nodes[1] * 10, river_nodes[0] * 10, color='black', s=2, lw=0, alpha=1)
+    # plt.gca().invert_yaxis()
+    # plt.show()
