@@ -28,7 +28,7 @@ def fill_single_cell_depressions(heights, rows, cols):
     :return heights: Updated heights with single cell depressions removed
     """
 
-    nbr_heights = get_neighbor_heights(heights, rows, cols)
+    nbr_heights = get_neighbor_heights(heights, rows, cols, d4=False)  # Careful for this d4=False!!!
     delta = np.repeat(heights[1:-1, 1:-1, np.newaxis], 8, axis=2) - nbr_heights[1:-1, 1:-1]
     local_minima = np.where(np.max(delta, axis=2) < 0)  # The single cell depressions to be raised
 
@@ -41,47 +41,65 @@ def fill_single_cell_depressions(heights, rows, cols):
     return heights
 
 
-def get_neighbor_heights(heights, rows, cols):
+def get_neighbor_heights(heights, rows, cols, d4):
     """
     Returns the heights of the neighbors for all nodes
     :param heights: Heights of the landscape
     :param rows: Number of rows in the 2D-grid
     :param cols: Number of columns in the 2D-grid
+    :param d4: Use the D4-method instead of D8
     :return nbr_heights: nx x ny x 8 grid
     """
 
-    nbr_heights = np.empty((rows, cols, 8), dtype=object)
+    if d4:
+        nbr_heights = np.empty((rows, cols, 4), dtype=object)
 
-    nbr_heights[1:-1, 1:-1, 0] = heights[0:-2, 2:]    # 1
-    nbr_heights[1:-1, 1:-1, 1] = heights[1:-1, 2:]    # 2
-    nbr_heights[1:-1, 1:-1, 2] = heights[2:, 2:]      # 4
-    nbr_heights[1:-1, 1:-1, 3] = heights[2:, 1:-1]    # 8
-    nbr_heights[1:-1, 1:-1, 4] = heights[2:, 0:-2]    # 16
-    nbr_heights[1:-1, 1:-1, 5] = heights[1:-1, 0:-2]  # 32
-    nbr_heights[1:-1, 1:-1, 6] = heights[0:-2, 0:-2]  # 64
-    nbr_heights[1:-1, 1:-1, 7] = heights[0:-2, 1:-1]  # 128
+        nbr_heights[1:-1, 1:-1, 0] = heights[1:-1, 2:]      # 1 (2)
+        nbr_heights[1:-1, 1:-1, 1] = heights[2:, 1:-1]      # 2 (8)
+        nbr_heights[1:-1, 1:-1, 2] = heights[1:-1, 0:-2]    # 3 (32)
+        nbr_heights[1:-1, 1:-1, 3] = heights[0:-2, 1:-1]    # 4 (128)
+    else:
+        nbr_heights = np.empty((rows, cols, 8), dtype=object)
+
+        nbr_heights[1:-1, 1:-1, 0] = heights[0:-2, 2:]    # 1
+        nbr_heights[1:-1, 1:-1, 1] = heights[1:-1, 2:]    # 2
+        nbr_heights[1:-1, 1:-1, 2] = heights[2:, 2:]      # 4
+        nbr_heights[1:-1, 1:-1, 3] = heights[2:, 1:-1]    # 8
+        nbr_heights[1:-1, 1:-1, 4] = heights[2:, 0:-2]    # 16
+        nbr_heights[1:-1, 1:-1, 5] = heights[1:-1, 0:-2]  # 32
+        nbr_heights[1:-1, 1:-1, 6] = heights[0:-2, 0:-2]  # 64
+        nbr_heights[1:-1, 1:-1, 7] = heights[0:-2, 1:-1]  # 128
 
     return nbr_heights
 
 
-def get_neighbor_indices(indices, cols):
+def get_neighbor_indices(indices, cols, d4):
     """
     Given a list of neighbors, returns their neighbor indices
     :param indices: Array of indices
     :param cols: Nr of columns
+    :param d4: Use the D4-method instead of D8
     :return nbrs: The neighbors
     """
 
-    nbrs = np.zeros((len(indices), 8), dtype=int)
+    if d4:
+        nbrs = np.zeros((len(indices), 4), dtype=int)
 
-    nbrs[:, 0] = indices - cols + 1
-    nbrs[:, 1] = indices + 1
-    nbrs[:, 2] = indices + cols + 1
-    nbrs[:, 3] = indices + cols
-    nbrs[:, 4] = indices + cols - 1
-    nbrs[:, 5] = indices - 1
-    nbrs[:, 6] = indices - cols - 1
-    nbrs[:, 7] = indices - cols
+        nbrs[:, 0] = indices + 1
+        nbrs[:, 1] = indices + cols
+        nbrs[:, 2] = indices - 1
+        nbrs[:, 3] = indices - cols
+    else:
+        nbrs = np.zeros((len(indices), 8), dtype=int)
+
+        nbrs[:, 0] = indices - cols + 1
+        nbrs[:, 1] = indices + 1
+        nbrs[:, 2] = indices + cols + 1
+        nbrs[:, 3] = indices + cols
+        nbrs[:, 4] = indices + cols - 1
+        nbrs[:, 5] = indices - 1
+        nbrs[:, 6] = indices - cols - 1
+        nbrs[:, 7] = indices - cols
 
     return nbrs
 
@@ -119,49 +137,65 @@ def get_domain_boundary_coords(cols, rows):
     return boundary_coordinates
 
 
-def get_derivatives(heights, nbr_heights, step_size):
+def get_derivatives(heights, nbr_heights, step_size, d4):
     """
     Returns the derivatives as a r x c x 8 grid, where all boundary coordinates
-    have None as derivatives,
+    have None as derivatives. (r x c x 4 if d4 method)
     :param heights:
     :param nbr_heights:
     :param step_size: Step size in the grid
-    :return derivatives: The slope to the neighbors for all nodes, nx x ny x 8
+    :param d4: Use the D4-method instead of D8
+    :return derivatives: The slope to the neighbors for all nodes, nx x ny x 8 (nx x ny x 4)
     """
 
     (r, c) = np.shape(heights)
 
-    delta = np.repeat(heights[1:-1, 1:-1, np.newaxis], 8, axis=2) - nbr_heights[1:-1, 1:-1]
-    diag = math.sqrt(step_size ** 2 + step_size ** 2)
-    card = step_size
-    distance = np.array([diag, card, diag, card, diag, card, diag, card])
-    calc_derivatives = np.divide(delta, distance)
+    if d4:
+        delta = np.repeat(heights[1:-1, 1:-1, np.newaxis], 4, axis=2) - nbr_heights[1:-1, 1:-1]
+        distance = np.ones(4) * step_size
+        calc_derivatives = np.divide(delta, distance)
+        derivatives = np.empty((r, c, 4), dtype=object)
+    else:
+        card = step_size
+        delta = np.repeat(heights[1:-1, 1:-1, np.newaxis], 8, axis=2) - nbr_heights[1:-1, 1:-1]
+        diag = math.sqrt(step_size ** 2 + step_size ** 2)
+        distance = np.array([diag, card, diag, card, diag, card, diag, card])
+        calc_derivatives = np.divide(delta, distance)
+        derivatives = np.empty((r, c, 8), dtype=object)
 
-    derivatives = np.empty((r, c, 8), dtype=object)
     derivatives[1:-1, 1:-1] = calc_derivatives
 
     return derivatives
 
 
-def get_flow_directions(heights, step_size, rows, cols):
+def get_flow_directions(heights, step_size, rows, cols, d4):
     """
     Returns the steepest directions for all nodes and setting -1 for local minima and flat areas
     :param heights: The heights for all nodes in the 2D-grid
     :param step_size: Step size in the grid
     :param rows: Nr of rows
     :param cols: Nr of columns
+    :param d4: Use the D4-method instead of D8
     :return: flow_directions: The neighbor index indicating steepest slope
     """
 
-    nbr_heights = get_neighbor_heights(heights, rows, cols)
-    derivatives = get_derivatives(heights, nbr_heights, step_size)
+    if d4:
+        nbr_heights = get_neighbor_heights(heights, rows, cols, d4=True)
+        derivatives = get_derivatives(heights, nbr_heights, step_size, d4=True)
+    else:
+        nbr_heights = get_neighbor_heights(heights, rows, cols, d4=False)
+        derivatives = get_derivatives(heights, nbr_heights, step_size, d4=False)
 
     flow_directions = np.empty((rows, cols), dtype=object)
     flow_directions[1:-1, 1:-1] = -1
 
     pos_derivatives = np.max(derivatives, axis=2) > 0
     flow_directions[pos_derivatives] = np.argmax(derivatives, axis=2)[pos_derivatives]
-    flow_directions[pos_derivatives] = 2 ** flow_directions[pos_derivatives]
+
+    if not d4:
+        flow_directions[pos_derivatives] = 2 ** flow_directions[pos_derivatives]
+    else:
+        flow_directions[pos_derivatives] += 1
 
     return flow_directions
 
@@ -191,27 +225,33 @@ def make_sparse_node_conn_matrix(flow_direction_indices, rows, cols):
     return node_conn_mat
 
 
-def remove_out_of_boundary_flow(flow_directions):
+def remove_out_of_boundary_flow(flow_directions, d4):
     """
     Replaces flow out of the boundary by flagging node as minimum/flat area (-1)
     :param flow_directions: The directions of flow for every node
+    :param d4: Use the D4-method instead of D8
     :return: Void function that alters flow_directions
     """
 
     # If flow direction is out of the interior, set flow direction to -1
-
-    change_top = np.concatenate((np.where(flow_directions[1, :] == 1)[0],
-                                np.where(flow_directions[1, :] == 64)[0],
-                                np.where(flow_directions[1, :] == 128)[0]))
-    change_right = np.concatenate((np.where(flow_directions[:, -2] == 1)[0],
-                                  np.where(flow_directions[:, -2] == 2)[0],
-                                  np.where(flow_directions[:, -2] == 4)[0]))
-    change_bottom = np.concatenate((np.where(flow_directions[-2, :] == 4)[0],
-                                   np.where(flow_directions[-2, :] == 8)[0],
-                                   np.where(flow_directions[-2, :] == 16)[0]))
-    change_left = np.concatenate((np.where(flow_directions[:, 1] == 16)[0],
-                                 np.where(flow_directions[:, 1] == 32)[0],
-                                 np.where(flow_directions[:, 1] == 64)[0]))
+    if d4:
+        change_top = np.where(flow_directions[1, :] == 4)[0]
+        change_right = np.where(flow_directions[:, -2] == 1)[0]
+        change_bottom = np.where(flow_directions[-2, :] == 2)[0]
+        change_left = np.where(flow_directions[:, 1] == 3)[0]
+    else:
+        change_top = np.concatenate((np.where(flow_directions[1, :] == 1)[0],
+                                    np.where(flow_directions[1, :] == 64)[0],
+                                    np.where(flow_directions[1, :] == 128)[0]))
+        change_right = np.concatenate((np.where(flow_directions[:, -2] == 1)[0],
+                                      np.where(flow_directions[:, -2] == 2)[0],
+                                      np.where(flow_directions[:, -2] == 4)[0]))
+        change_bottom = np.concatenate((np.where(flow_directions[-2, :] == 4)[0],
+                                       np.where(flow_directions[-2, :] == 8)[0],
+                                       np.where(flow_directions[-2, :] == 16)[0]))
+        change_left = np.concatenate((np.where(flow_directions[:, 1] == 16)[0],
+                                     np.where(flow_directions[:, 1] == 32)[0],
+                                     np.where(flow_directions[:, 1] == 64)[0]))
 
     flow_directions[1, change_top] = -1
     flow_directions[change_right, -2] = -1
@@ -221,7 +261,7 @@ def remove_out_of_boundary_flow(flow_directions):
     # This function does not return something, just change the input flow_directions
 
 
-def get_flow_direction_indices(heights, step_size, rows, cols):
+def get_flow_direction_indices(heights, step_size, rows, cols, d4):
     """
     For every coordinate specifies the next index it flows to. If no flow, the index is set as -1.
     All boundary nodes have a flow set to None, as there's not enough information to determine.
@@ -229,17 +269,26 @@ def get_flow_direction_indices(heights, step_size, rows, cols):
     :param step_size: Length between grid points
     :param rows: Nodes in y-direction
     :param cols: Nodes in x-direction
+    :param d4: Use the D4-method instead of D8
     :return flow_directions: Next node it flows to
     """
 
-    flow_directions = get_flow_directions(heights, step_size, rows, cols)
-    remove_out_of_boundary_flow(flow_directions)
+    if d4:
+        flow_directions = get_flow_directions(heights, step_size, rows, cols, d4=True)
+        remove_out_of_boundary_flow(flow_directions, d4=True)
+    else:
+        flow_directions = get_flow_directions(heights, step_size, rows, cols, d4=False)
+        remove_out_of_boundary_flow(flow_directions, d4=False)
 
     # Copy flow directions, and write to that array
     flow_direction_indices = np.copy(flow_directions)
 
-    values = [1, 2, 4, 8, 16, 32, 64, 128]
-    translations = [-cols + 1, 1, cols + 1, cols, cols - 1, -1, -cols - 1, -cols]
+    if d4:
+        values = [1, 2, 3, 4]
+        translations = [1, cols, -1, -cols]
+    else:
+        values = [1, 2, 4, 8, 16, 32, 64, 128]
+        translations = [-cols + 1, 1, cols + 1, cols, cols - 1, -1, -cols - 1, -cols]
 
     for ix in range(len(values)):
         coords = np.where(flow_directions == values[ix])
@@ -368,12 +417,13 @@ def map_2d_exterior_to_1d_interior(coords, cols):
     return indices
 
 
-def combine_minima(local_minima, rows, cols):
+def combine_minima(local_minima, rows, cols, d4):
     """
     Return the combined minima in the landscape as a list of arrays
     :param local_minima: 1D-array with indices of all minima
     :param rows: Nr of rows
     :param cols: Nr of columns
+    :param d4: Use the D4-method instead of D8
     :return combined_minima: List of arrays containing the combined minima
     """
 
@@ -382,16 +432,23 @@ def combine_minima(local_minima, rows, cols):
 
     local_minima_2d = map_1d_to_2d(local_minima, cols)
 
-    one = (local_minima_2d[0] - 1, local_minima_2d[1] + 1)
-    two = (local_minima_2d[0], local_minima_2d[1] + 1)
-    four = local_minima_2d[0] + 1, local_minima_2d[1] + 1
-    eight = local_minima_2d[0] + 1, local_minima_2d[1]
-    sixteen = local_minima_2d[0] + 1, local_minima_2d[1] - 1
-    thirtytwo = local_minima_2d[0], local_minima_2d[1] - 1
-    sixtyfour = local_minima_2d[0] - 1, local_minima_2d[1] - 1
-    onetwentyeight = local_minima_2d[0] - 1, local_minima_2d[1]
+    if d4:
+        two = (local_minima_2d[0], local_minima_2d[1] + 1)
+        eight = local_minima_2d[0] + 1, local_minima_2d[1]
+        thirtytwo = local_minima_2d[0], local_minima_2d[1] - 1
+        onetwentyeight = local_minima_2d[0] - 1, local_minima_2d[1]
+        nbrs_to_minima = np.hstack((two, eight, thirtytwo, onetwentyeight))
+    else:
+        one = (local_minima_2d[0] - 1, local_minima_2d[1] + 1)
+        two = (local_minima_2d[0], local_minima_2d[1] + 1)
+        four = local_minima_2d[0] + 1, local_minima_2d[1] + 1
+        eight = local_minima_2d[0] + 1, local_minima_2d[1]
+        sixteen = local_minima_2d[0] + 1, local_minima_2d[1] - 1
+        thirtytwo = local_minima_2d[0], local_minima_2d[1] - 1
+        sixtyfour = local_minima_2d[0] - 1, local_minima_2d[1] - 1
+        onetwentyeight = local_minima_2d[0] - 1, local_minima_2d[1]
+        nbrs_to_minima = np.hstack((one, two, four, eight, sixteen, thirtytwo, sixtyfour, onetwentyeight))
 
-    nbrs_to_minima = np.hstack((one, two, four, eight, sixteen, thirtytwo, sixtyfour, onetwentyeight))
     nbrs_to_minima_1d = map_2d_to_1d(nbrs_to_minima, cols)
     from_min = np.concatenate([local_minima for i in range(8)])
 
@@ -443,18 +500,22 @@ def combine_watersheds(local_watersheds, combined_minima):
     return watersheds
 
 
-def create_nbr_connectivity_matrix(flow_directions, nx, ny):
+def create_nbr_connectivity_matrix(flow_directions, nx, ny, d4):
     # Note: This is a version without 1 on the diagonal
     """
     Create a connectivity matrix between all nodes using the flow
     :param flow_directions: 2D-grid showing the flow
     :param nx: Number of cols
     :param ny: Number of rows
+    :param d4: Use the D4-method instead of D8
     :return A: Returns a sparse adjacency matrix
     """
 
     # Start by removing the flow out of the boundary
-    remove_out_of_boundary_flow(flow_directions)
+    if d4:
+        remove_out_of_boundary_flow(flow_directions, d4=True)
+    else:
+        remove_out_of_boundary_flow(flow_directions, d4=False)
 
     values = [1, 2, 4, 8, 16, 32, 64, 128]
     translations = [-nx + 1, 1, nx + 1, nx, nx - 1, -1, -nx - 1, -nx]
@@ -540,18 +601,22 @@ def get_watersheds_with_combined_minima(combined_minima, local_watersheds):
     return watersheds
 
 
-def get_boundary_pairs_in_watersheds(watersheds, nx, ny):
+def get_boundary_pairs_in_watersheds(watersheds, nx, ny, d4):
     """
     Return all boundary pairs between all watersheds. If domain pairs should be excluded,
     remove comments at indicated places.
     :param watersheds: All watersheds of the domain.
     :param nx: Nr of nodes in x-direction
     :param ny: Nr of nodes in y-direction
+    :param d4: Use the D4-method instead of D8
     :return boundary_pairs: List of lists where each list contain a tuple of two arrays
     """
 
     indices = np.arange(0, nx * ny, 1)
-    nbrs = get_neighbor_indices(indices, nx)
+    if d4:
+        nbrs = get_neighbor_indices(indices, nx, d4=True)
+    else:
+        nbrs = get_neighbor_indices(indices, nx, d4=False)
 
     # N.B: If boundary pairs to domain should be removed, include line below
     # domain_bnd_nodes = get_domain_boundary_indices(nx, ny)
@@ -572,7 +637,10 @@ def get_boundary_pairs_in_watersheds(watersheds, nx, ny):
         # valid_nodes = np.where((not_in_watershed_arr - at_dom_boundary) == True)[0]
 
         # Pairs in from-to format
-        repeat_from = np.repeat(watershed, 8)
+        if d4:
+            repeat_from = np.repeat(watershed, 4)
+        else:
+            repeat_from = np.repeat(watershed, 8)
         from_indices = repeat_from[not_in_watershed_arr]
         to_indices = nbrs_for_ws_1d[not_in_watershed_arr]
         boundary_pairs_for_ws = [from_indices, to_indices]
@@ -581,11 +649,12 @@ def get_boundary_pairs_in_watersheds(watersheds, nx, ny):
     return boundary_pairs
 
 
-def get_boundary_pairs_for_specific_watersheds(specific_watersheds, nx):
+def get_boundary_pairs_for_specific_watersheds(specific_watersheds, nx, d4):
     """
     Only find boundary pairs for specified watersheds.
     :param specific_watersheds: Selection of watersheds
     :param nx: Number of nodes in x-direction
+    :param d4: Use the D4-method instead of D8
     :return boundary_pairs: Boundary pairs for specified watersheds
     """
 
@@ -593,12 +662,18 @@ def get_boundary_pairs_for_specific_watersheds(specific_watersheds, nx):
 
     for watershed in specific_watersheds:
 
-        nbrs = get_neighbor_indices(watershed, nx)
+        if d4:
+            nbrs = get_neighbor_indices(watershed, nx, d4=True)
+        else:
+            nbrs = get_neighbor_indices(watershed, nx, d4=False)
         nbrs_for_ws_1d = np.concatenate(nbrs)
         valid_nodes = np.in1d(nbrs_for_ws_1d, watershed, invert=True)
 
         # Pairs in from-to format
-        repeat_from = np.repeat(watershed, 8)
+        if d4:
+            repeat_from = np.repeat(watershed, 4)
+        else:
+            repeat_from = np.repeat(watershed, 8)
         from_indices = repeat_from[valid_nodes]
         to_indices = nbrs_for_ws_1d[valid_nodes]
         boundary_pairs_for_ws = [from_indices, to_indices]
@@ -631,11 +706,12 @@ def get_possible_spill_pairs(heights, boundary_pairs):
     return spill_pairs
 
 
-def get_steepest_spill_pair(heights, spill_pairs):
+def get_steepest_spill_pair(heights, spill_pairs, d4):
     """
     Return a list of tuples where each tuple is the spill pair for each watershed
     :param heights: Heights of terrain
     :param spill_pairs: List of lists. Each list contains two arrays in from-to format
+    :param d4: Use the D4-method instead of D8
     :return steepest_spill_pairs: Set containing the steepest spill pairs
     """
 
@@ -653,7 +729,6 @@ def get_steepest_spill_pair(heights, spill_pairs):
         diag_der = (heights[spill_pairs[i][0][diag_indices]] - heights[spill_pairs[i][1][diag_indices]])/math.sqrt(200)
         derivatives[card_indices] = card_der
         derivatives[diag_indices] = diag_der
-
         max_index = np.argmax(derivatives)
         steepest_spill_pairs[i] = (spill_pairs[i][0][max_index], spill_pairs[i][1][max_index])
 
@@ -708,11 +783,12 @@ def merge_watersheds_flowing_into_each_other(watersheds, steepest_spill_pairs, r
     return merged_watersheds, removed_spill_pairs, merged_indices
 
 
-def combine_watersheds_spilling_into_each_other(watersheds, heights):
+def combine_watersheds_spilling_into_each_other(watersheds, heights, d4):
     """
     Iterative process to combine all watersheds spilling into each other
     :param watersheds: Different areas flowing to the same area
     :param heights: Heights of terrain
+    :param d4: Use the D4-method instead of D8
     :return watersheds: New collection of watersheds where some have been merged
     """
 
@@ -727,9 +803,9 @@ def combine_watersheds_spilling_into_each_other(watersheds, heights):
         print it
 
         # Find spill pairs for given watersheds
-        boundary_pairs = get_boundary_pairs_for_specific_watersheds(merged_watersheds, nx)
+        boundary_pairs = get_boundary_pairs_for_specific_watersheds(merged_watersheds, nx, d4)
         spill_pairs = get_possible_spill_pairs(heights, boundary_pairs)
-        steepest_spill_pairs = get_steepest_spill_pair(heights, spill_pairs)
+        steepest_spill_pairs = get_steepest_spill_pair(heights, spill_pairs, d4)
 
         # Add the new spill pairs to the unaltered ones
         steepest_spill_pairs = steepest_spill_pairs.union(remaining_spill_pairs)
@@ -975,22 +1051,23 @@ def create_watershed_conn_matrix(watersheds, steepest_spill_pairs, rows, cols):
     return conn_mat
 
 
-def calculate_watersheds(heights, dim_x, dim_y, step_size):
+def calculate_watersheds(heights, dim_x, dim_y, step_size, d4):
     """
     Given information about grid and heights, the watersheds are calculated. Information about spill points are used to
     merge watersheds spilling into each other.
     :param heights: The elevations for the grid points. The landscape must have single-cell depressions filled!
     :param dim_x: Size of grid in x-dimension
     :param dim_y: Size of grid in y-dimension
+    :param d4: Use the D4-method instead of D8
     :param step_size: Length between points in one dimension
     :return:
     """
 
-    flow_directions = get_flow_direction_indices(heights, step_size, dim_y, dim_x)
+    flow_directions = get_flow_direction_indices(heights, step_size, dim_y, dim_x, d4)
     node_endpoints = get_node_endpoints(flow_directions)
     local_watersheds = get_local_watersheds(node_endpoints)
     local_minima = np.asarray(local_watersheds.keys())
-    combined_minima = combine_minima(local_minima, dim_y, dim_x)
+    combined_minima = combine_minima(local_minima, dim_y, dim_x, d4)
     watersheds = combine_watersheds(local_watersheds, combined_minima)
     watersheds, steepest_spill_pairs = combine_watersheds_spilling_into_each_other(watersheds, heights)
 
@@ -1032,23 +1109,42 @@ def make_landscape_depressionless(watersheds, steepest_spill_pairs, landscape):
         landscape.heights[map_1d_to_2d(np.asarray(traps[i]), landscape.ny)] = spill_heights[i]
 
 
-def make_depressionless(heights, step_size):
+def make_landscape_depressionless_no_landscape_input(watersheds, steepest_spill_pairs, heights, ny):
+    """
+    Makes the landscape depressionless by filling the traps to the spill heights. It is important that watersheds
+    spilling into each other have been combined. The result is a monotonically decreasing landscape.
+    :param watersheds: All watersheds in the domain
+    :param steepest_spill_pairs: The spill pairs for all watersheds
+    :param heights: Heights of landscape
+    :param ny: Nr of rows
+    :return: Nothing. It only modifies landscape.heights.
+    """
+
+    spill_heights = get_spill_heights(watersheds, heights, steepest_spill_pairs)
+    traps, size_of_traps = get_all_traps(watersheds, heights, spill_heights)
+
+    for i in range(len(traps)):
+        heights[map_1d_to_2d(np.asarray(traps[i]), ny)] = spill_heights[i]
+
+
+def make_depressionless(heights, step_size, d4):
     """
     Given only heights and step_size, calculate the depressionless landscape
     :param heights: Heights of domain
     :param step_size: Step size between grid points, assume regular grid
+    :param d4: Use the D4-method instead of D8
     :return heights: The new heights with depressions filled
     """
 
     ny, nx = np.shape(heights)
     fill_single_cell_depressions(heights, ny, nx)
-    flow_directions = get_flow_direction_indices(heights, step_size, ny, nx)
+    flow_directions = get_flow_direction_indices(heights, step_size, ny, nx, d4)
     node_endpoints = get_node_endpoints(flow_directions)
     local_watersheds = get_local_watersheds(node_endpoints)
     local_minima = np.asarray(local_watersheds.keys())
-    combined_minima = combine_minima(local_minima, ny, nx)
+    combined_minima = combine_minima(local_minima, ny, nx, d4)
     watersheds = combine_watersheds(local_watersheds, combined_minima)
-    watersheds, steepest_spill_pairs = combine_watersheds_spilling_into_each_other(watersheds, heights)
+    watersheds, steepest_spill_pairs = combine_watersheds_spilling_into_each_other(watersheds, heights, d4)
 
     spill_heights = get_spill_heights(watersheds, heights, steepest_spill_pairs)
     traps, size_of_traps = get_all_traps(watersheds, heights, spill_heights)

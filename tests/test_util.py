@@ -115,7 +115,27 @@ def test_get_neighbor_heights():
     neighbors[2, 1] = np.array([7, 11, 15, 14, 13, 9, 5, 6])
     neighbors[2, 2] = np.array([8, 12, 16, 15, 14, 10, 6, 7])
 
-    result_neighbors = util.get_neighbor_heights(heights, rows, cols)
+    result_neighbors = util.get_neighbor_heights(heights, rows, cols, d4=False)
+
+    assert np.array_equal(neighbors, result_neighbors)
+
+
+def test_get_neighbor_heights_d4():
+
+    cols = 4
+    rows = 4
+    heights = np.array([[1, 2, 3, 4],
+                        [5, 6, 7, 8],
+                        [9, 10, 11, 12],
+                        [13, 14, 15, 16]])
+
+    neighbors = np.empty((rows, cols, 4), dtype=object)
+    neighbors[1, 1] = np.array([7, 10, 5, 2])
+    neighbors[1, 2] = np.array([8, 11, 6, 3])
+    neighbors[2, 1] = np.array([11, 14, 9, 6])
+    neighbors[2, 2] = np.array([12, 15, 10, 7])
+
+    result_neighbors = util.get_neighbor_heights(heights, rows, cols, d4=True)
 
     assert np.array_equal(neighbors, result_neighbors)
 
@@ -132,7 +152,24 @@ def test_get_neighbor_heights_rect():
     neighbors[1, 1] = np.array([10, 3, 30, 40, 50, 1, 0, 5])
     neighbors[1, 2] = np.array([15, 4, 20, 30, 40, 2, 5, 10])
 
-    result_neighbors = util.get_neighbor_heights(heights, rows, cols)
+    result_neighbors = util.get_neighbor_heights(heights, rows, cols, d4=False)
+
+    assert np.array_equal(neighbors, result_neighbors)
+
+
+def test_get_neighbor_heights_d4_rect():
+
+    cols = 4
+    rows = 3
+    heights = np.array([[0, 5, 10, 15],
+                        [1, 2, 3, 4],
+                        [50, 40, 30, 20]])
+
+    neighbors = np.empty((rows, cols, 4), dtype=object)
+    neighbors[1, 1] = np.array([3, 40, 1, 5])
+    neighbors[1, 2] = np.array([4, 30, 2, 10])
+
+    result_neighbors = util.get_neighbor_heights(heights, rows, cols, d4=True)
 
     assert np.array_equal(neighbors, result_neighbors)
 
@@ -146,7 +183,21 @@ def test_get_neighbor_indices():
                             [10, 16, 22, 21, 20, 14, 8, 9],
                             [14, 20, 26, 25, 24, 18, 12, 13],
                             [17, 23, 29, 28, 27, 21, 15, 16]])
-    nbrs = util.get_neighbor_indices(indices, cols)
+    nbrs = util.get_neighbor_indices(indices, cols, d4=False)
+
+    assert np.array_equal(nbrs, result_nbrs)
+
+
+def test_get_neighbor_indices_d4():
+
+    cols = 6
+    indices = np.array([7, 15, 19, 22])
+
+    result_nbrs = np.array([[8, 13, 6, 1],
+                            [16, 21, 14, 9],
+                            [20, 25, 18, 13],
+                            [23, 28, 21, 16]])
+    nbrs = util.get_neighbor_indices(indices, cols, d4=True)
 
     assert np.array_equal(nbrs, result_nbrs)
 
@@ -183,7 +234,43 @@ def test_get_derivatives():
                              [None, None, None, None, None, None, None, None],
                              [None, None, None, None, None, None, None, None],
                              [None, None, None, None, None, None, None, None]]], dtype=object)
-    result_derivatives = util.get_derivatives(heights, nbr_heights, h)
+    result_derivatives = util.get_derivatives(heights, nbr_heights, h, d4=False)
+
+    assert np.array_equal(derivatives, result_derivatives)
+
+
+def test_get_derivatives_d4():
+
+    r = 4
+    c = 4
+    heights = np.array([[18, 63, 59, 3],
+                        [6, 77, 59, 75],
+                        [68, 65, 7, 35],
+                        [11, 31, 69, 20]])
+    nbr_heights = np.empty((r, c, 4), dtype=object)
+    nbr_heights[1, 1] = np.array([59, 65, 6, 63])
+    nbr_heights[1, 2] = np.array([75, 7, 77, 59])
+    nbr_heights[2, 1] = np.array([7, 31, 68, 77])
+    nbr_heights[2, 2] = np.array([35, 69, 65, 59])
+    h = 10.0
+
+    derivatives = np.array([[[None, None, None, None],
+                             [None, None, None, None],
+                             [None, None, None, None],
+                             [None, None, None, None]],
+                            [[None, None, None, None],
+                             [18/h, 12/h, 71/h, 14/h],
+                             [-16/h, 52/h, -18/h, 0/h],
+                             [None, None, None, None]],
+                            [[None, None, None, None],
+                             [58/h, 34/h, -3/h, -12/h],
+                             [-28/h, -62/h, -58/h, -52/h],
+                             [None, None, None, None]],
+                            [[None, None, None, None],
+                             [None, None, None, None],
+                             [None, None, None, None],
+                             [None, None, None, None]]], dtype=object)
+    result_derivatives = util.get_derivatives(heights, nbr_heights, h, d4=True)
 
     assert np.array_equal(derivatives, result_derivatives)
 
@@ -202,7 +289,27 @@ def test_get_flow_directions():
                                     [None, 32, 8, None],
                                     [None, 2, -1, None],
                                     [None, None, None, None]])
-    result_pos_flow_directions = util.get_flow_directions(heights, step_size, rows, cols)
+    result_pos_flow_directions = util.get_flow_directions(heights, step_size, rows, cols, d4=False)
+
+    assert np.array_equal(pos_flow_directions, result_pos_flow_directions)
+
+
+def test_get_flow_directions_d4():
+
+    rows = 4
+    cols = 4
+    step_size = 10
+    heights = np.array([[18, 63, 59, 3],
+                        [6, 77, 59, 75],
+                        [68, 65, 7, 35],
+                        [11, 31, 69, 20]])
+
+    pos_flow_directions = np.array([[None, None, None, None],
+                                    [None, 3, 2, None],
+                                    [None, 1, -1, None],
+                                    [None, None, None, None]])
+    result_pos_flow_directions = util.get_flow_directions(heights, step_size, rows, cols, d4=True)
+    print result_pos_flow_directions
 
     assert np.array_equal(pos_flow_directions, result_pos_flow_directions)
 
@@ -223,7 +330,28 @@ def test_get_flow_directions_advanced():
                                 [None, -1, 32, 4, 8, None],
                                 [None, 128, 64, 2, -1, None],
                                 [None, None, None, None, None, None]])
-    result_pos_flow_directions = util.get_flow_directions(heights, step_size, rows, cols)
+    result_pos_flow_directions = util.get_flow_directions(heights, step_size, rows, cols, d4=False)
+
+    assert np.array_equal(flow_directions, result_pos_flow_directions)
+
+
+def test_get_flow_directions_d4_advanced():
+
+    rows = 5
+    cols = 6
+    step_size = 10
+    heights = np.array([[5, 7, 8, 7, 6, 0],
+                        [7, 2, 10, 10, 7, 6],
+                        [7, 2, 4, 5, 5, 4],
+                        [7, 7, 3.9, 4, 0, 0],
+                        [6, 5, 4, 4, 0, 0]])
+
+    flow_directions = np.array([[None, None, None, None, None, None],
+                                [None, -1, 3, 2, 2, None],
+                                [None, -1, 3, 2, 2, None],
+                                [None, 4, -1, 1, -1, None],
+                                [None, None, None, None, None, None]])
+    result_pos_flow_directions = util.get_flow_directions(heights, step_size, rows, cols, d4=True)
 
     assert np.array_equal(flow_directions, result_pos_flow_directions)
 
@@ -242,7 +370,26 @@ def test_get_flow_directions_float():
                                 [None, 1, 2, None],
                                 [None, 2, 2, None],
                                 [None, None, None, None]])
-    result_pos_flow_directions = util.get_flow_directions(heights, step_size, rows, cols)
+    result_pos_flow_directions = util.get_flow_directions(heights, step_size, rows, cols, d4=False)
+
+    assert np.array_equal(flow_directions, result_pos_flow_directions)
+
+
+def test_get_flow_directions_d4_float():
+
+    rows = 4
+    cols = 4
+    step_size = 10
+    heights = np.array([[399.8, 396.9, 392.7, 386.9],
+                        [402.5, 399.4, 394.8, 388.8],
+                        [405.4, 402.0, 396.5, 389.5],
+                        [407.9, 404.8, 398.4, 389.6]])
+
+    flow_directions = np.array([[None, None, None, None],
+                                [None, 1, 1, None],
+                                [None, 1, 1, None],
+                                [None, None, None, None]])
+    result_pos_flow_directions = util.get_flow_directions(heights, step_size, rows, cols, d4=True)
 
     assert np.array_equal(flow_directions, result_pos_flow_directions)
 
@@ -263,12 +410,33 @@ def test_get_flow_direction_indices_one():
                                               [None, -1, 13, 22, 22, None],
                                               [None, 13, 13, 22, -1, None],
                                               [None, None, None, None, None, None]])
-    flow_direction_indices = util.get_flow_direction_indices(heights, step_size, rows, cols)
+    flow_direction_indices = util.get_flow_direction_indices(heights, step_size, rows, cols, d4=False)
 
     assert np.array_equal(flow_direction_indices, result_flow_direction_indices)
 
 
-def test_get_flow_direction_indices_two():
+def test_get_flow_direction_indices_d4_one():
+
+    rows = 5
+    cols = 6
+    step_size = 10
+    heights = np.array([[5, 7, 8, 7, 6, 0],
+                        [7, 2, 10, 10, 7, 6],
+                        [7, 2, 4, 5, 5, 4],
+                        [7, 7, 3.9, 4, 0, 0],
+                        [6, 5, 4, 4, 0, 0]])
+
+    result_flow_direction_indices = np.array([[None, None, None, None, None, None],
+                                              [None, -1, 7, 15, 16, None],
+                                              [None, -1, 13, 21, 22, None],
+                                              [None, 13, -1, 22, -1, None],
+                                              [None, None, None, None, None, None]])
+    flow_direction_indices = util.get_flow_direction_indices(heights, step_size, rows, cols, d4=True)
+
+    assert np.array_equal(flow_direction_indices, result_flow_direction_indices)
+
+
+def test_get_flow_direction_indices_d4_two():
 
     rows = 5
     cols = 5
@@ -282,9 +450,9 @@ def test_get_flow_direction_indices_two():
     result_flow_direction_indices = np.array([[None, None, None, None, None],
                                               [None, -1, 8, -1, None],
                                               [None, 6, 13, -1, None],
-                                              [None, -1, 13, 13, None],
+                                              [None, -1, 18, 13, None],
                                               [None, None, None, None, None]])
-    flow_direction_indices = util.get_flow_direction_indices(heights, step_size, rows, cols)
+    flow_direction_indices = util.get_flow_direction_indices(heights, step_size, rows, cols, d4=True)
 
     assert np.array_equal(flow_direction_indices, result_flow_direction_indices)
 
@@ -324,30 +492,49 @@ def test_remove_out_of_boundary_flow():
                                     [-2, 128, 64, 2, -1, -2],
                                     [-2, -2, -2, -2, -2, -2]])
 
-    util.remove_out_of_boundary_flow(flow_directions)
+    util.remove_out_of_boundary_flow(flow_directions, d4=False)
 
     assert np.array_equal(flow_directions, new_flow_directions)
 
 
-def test_remove_out_of_boundary_flow_advanced():
+def test_remove_out_of_boundary_flow_d4():
+
+    flow_directions = np.array([[-2, -2, -2, -2, -2, -2],
+                                [-2, -1, 4, 2, 2, -2],
+                                [-2, -1, 3, 2, 1, -2],
+                                [-2, 3, -1, 1, -1, -2],
+                                [-2, -2, -2, -2, -2, -2]])
+
+    new_flow_directions = np.array([[-2, -2, -2, -2, -2, -2],
+                                    [-2, -1, -1, 2, 2, -2],
+                                    [-2, -1, 3, 2, -1, -2],
+                                    [-2, -1, -1, 1, -1, -2],
+                                    [-2, -2, -2, -2, -2, -2]])
+
+    util.remove_out_of_boundary_flow(flow_directions, d4=True)
+
+    assert np.array_equal(flow_directions, new_flow_directions)
+
+
+def test_remove_out_of_boundary_flow_d4_advanced():
 
     flow_directions = np.array([[-2, -2, -2, -2, -2, -2, -2],
-                                [-2, 2, 64, 4, 128, 1, -2],
-                                [-2, 64, 16, 4, 32, 32, -2],
-                                [-2, 32, 64, 128, 1, 2, -2],
-                                [-2, 16, 16, 8, 4, 128, -2],
-                                [-2, 4, 32, 16, 8, 4, -2],
+                                [-2, 1, 4, 2, 2, 1, -2],
+                                [-2, 3, 3, 2, 3, 3, -2],
+                                [-2, 3, 3, 4, 4, 1, -2],
+                                [-2, 2, 2, 2, 1, 4, -2],
+                                [-2, 1, 3, 2, 2, 1, -2],
                                 [-2, -2, -2, -2, -2, -2, -2]])
 
     new_flow_directions = np.array([[-2, -2, -2, -2, -2, -2, -2],
-                                    [-2, 2, -1, 4, -1, -1, -2],
-                                    [-2, -1, 16, 4, 32, 32, -2],
-                                    [-2, -1, 64, 128, 1, -1, -2],
-                                    [-2, -1, 16, 8, 4, 128, -2],
-                                    [-2, -1, 32, -1, -1, -1, -2],
+                                    [-2, 1, -1, 2, 2, -1, -2],
+                                    [-2, -1, 3, 2, 3, 3, -2],
+                                    [-2, -1, 3, 4, 4, -1, -2],
+                                    [-2, 2, 2, 2, 1, 4, -2],
+                                    [-2, 1, 3, -1, -1, -1, -2],
                                     [-2, -2, -2, -2, -2, -2, -2]])
 
-    util.remove_out_of_boundary_flow(flow_directions)
+    util.remove_out_of_boundary_flow(flow_directions, d4=True)
 
     assert np.array_equal(flow_directions, new_flow_directions)
 
@@ -418,7 +605,21 @@ def test_combine_minima_one_combination():
     local_minima = np.array([6, 10])
 
     comb_min = [np.array([6, 10])]
-    result_comb_min = util.combine_minima(local_minima, rows, cols)
+    result_comb_min = util.combine_minima(local_minima, rows, cols, d4=False)
+    for i in range(len(result_comb_min)):
+        result_comb_min[i] = sorted(result_comb_min[i])
+
+    assert compare_methods.compare_two_lists_of_arrays(comb_min, result_comb_min)
+
+
+def test_combine_minima_d4_one_combination():
+
+    rows = 4
+    cols = 4
+    local_minima = np.array([6, 10])
+
+    comb_min = [np.array([6, 10])]
+    result_comb_min = util.combine_minima(local_minima, rows, cols, d4=True)
     for i in range(len(result_comb_min)):
         result_comb_min[i] = sorted(result_comb_min[i])
 
@@ -432,7 +633,19 @@ def test_combine_minima_one_min():
     local_minima = np.array([4])
 
     comb_min = [np.array([4])]
-    result_comb_min = util.combine_minima(local_minima, rows, cols)
+    result_comb_min = util.combine_minima(local_minima, rows, cols, d4=False)
+
+    assert compare_methods.compare_two_lists_of_arrays(comb_min, result_comb_min)
+
+
+def test_combine_minima_d4_one_min():
+
+    rows = 3
+    cols = 3
+    local_minima = np.array([4])
+
+    comb_min = [np.array([4])]
+    result_comb_min = util.combine_minima(local_minima, rows, cols, d4=True)
 
     assert compare_methods.compare_two_lists_of_arrays(comb_min, result_comb_min)
 
@@ -444,7 +657,19 @@ def test_combine_minima_two_single_min():
     local_minima = np.array([4, 10])
 
     comb_min = [np.array([4]), np.array([10])]
-    result_comb_min = util.combine_minima(local_minima, rows, cols)
+    result_comb_min = util.combine_minima(local_minima, rows, cols, d4=False)
+
+    assert compare_methods.compare_two_lists_of_arrays(comb_min, result_comb_min)
+
+
+def test_combine_minima_d4_two_single_min():
+
+    rows = 5
+    cols = 3
+    local_minima = np.array([4, 10])
+
+    comb_min = [np.array([4]), np.array([10])]
+    result_comb_min = util.combine_minima(local_minima, rows, cols, d4=True)
 
     assert compare_methods.compare_two_lists_of_arrays(comb_min, result_comb_min)
 
@@ -456,7 +681,35 @@ def test_combine_minima_three_comb():
     local_minima = np.array([7, 10, 13, 22])
 
     comb_min = [np.array([7, 13]), np.array([10]), np.array([22])]
-    result_comb_min = util.combine_minima(local_minima, rows, cols)
+    result_comb_min = util.combine_minima(local_minima, rows, cols, d4=False)
+    for i in range(len(result_comb_min)):
+        result_comb_min[i] = sorted(result_comb_min[i])
+
+    assert compare_methods.compare_two_lists_of_arrays(comb_min, result_comb_min)
+
+
+def test_combine_minima_d4_three_comb():
+
+    rows = 5
+    cols = 6
+    local_minima = np.array([7, 10, 13, 22])
+
+    comb_min = [np.array([7, 13]), np.array([10]), np.array([22])]
+    result_comb_min = util.combine_minima(local_minima, rows, cols, d4=True)
+    for i in range(len(result_comb_min)):
+        result_comb_min[i] = sorted(result_comb_min[i])
+
+    assert compare_methods.compare_two_lists_of_arrays(comb_min, result_comb_min)
+
+
+def test_combine_minima_d4_four_comb():
+
+    rows = 5
+    cols = 6
+    local_minima = np.array([7, 10, 13, 20, 22])
+
+    comb_min = [np.array([7, 13]), np.array([10]), np.array([20]), np.array([22])]
+    result_comb_min = util.combine_minima(local_minima, rows, cols, d4=True)
     for i in range(len(result_comb_min)):
         result_comb_min[i] = sorted(result_comb_min[i])
 
@@ -472,7 +725,7 @@ def test_combine_minima_advanced():
     comb_min = [np.array([11, 22, 23, 24, 33, 44]), np.array([17, 18]),
                 np.array([37, 38, 46, 48, 58]), np.array([52])]
 
-    result_comb_min = util.combine_minima(local_minima, rows, cols)
+    result_comb_min = util.combine_minima(local_minima, rows, cols, d4=False)
     for i in range(len(result_comb_min)):
         result_comb_min[i] = sorted(result_comb_min[i])
 
@@ -508,55 +761,33 @@ def test_get_boundary_pairs_in_watersheds():
                              [np.array([29, 29, 30, 30, 30, 31, 31, 31, 31, 31, 38, 38, 29, 29, 29, 36, 36, 36, 36, 36, 37, 37, 37, 38, 38, 38]),
                               np.array([22, 23, 22, 23, 24, 23, 24, 25, 32, 39, 32, 39, 21, 28, 35, 28, 35, 42, 43, 44, 43, 44, 45, 44, 45, 46])]]
 
-    boundary_pairs = util.get_boundary_pairs_in_watersheds(watersheds, num_of_cols, num_of_rows)
+    boundary_pairs = util.get_boundary_pairs_in_watersheds(watersheds, num_of_cols, num_of_rows, d4=False)
 
     are_equal = compare_methods.compare_list_of_lists_by_comparing_sets(boundary_pairs, result_boundary_pairs)
 
     assert are_equal
 
 
-# def test_get_boundary_pairs_in_watersheds_exclude_domain_small():
-#
-#     num_of_cols = 7
-#     num_of_rows = 7
-#     watersheds = [np.array([8, 9, 15, 16, 22]),
-#                   np.array([10, 11, 12, 17, 18, 19, 23, 24, 25, 26, 32, 33, 39, 40]),
-#                   np.array([29, 30, 31, 36, 37, 38])]
-#
-#     result_boundary_pairs = [[np.array([9, 9, 16, 16, 16, 16, 15, 22, 22, 22]),
-#                               np.array([10, 17, 10, 17, 23, 24, 23, 23, 29, 30])],
-#                              [np.array([10, 10, 17, 17, 23, 23, 23, 23, 23, 23, 24, 24, 24, 25, 32, 32, 39, 39]),
-#                               np.array([9, 16, 9, 16, 15, 16, 22, 29, 30, 31, 16, 30, 31, 31, 31, 38, 31, 38])],
-#                              [np.array([29, 29, 30, 30, 30, 31, 31, 31, 31, 31, 38, 38]),
-#                               np.array([22, 23, 22, 23, 24, 23, 24, 25, 32, 39, 32, 39])]]
-#
-#     boundary_pairs = util.get_boundary_pairs_in_watersheds(watersheds, num_of_cols, num_of_rows)
-#
-#     are_equal = compare_methods.compare_list_of_lists_by_comparing_sets(boundary_pairs, result_boundary_pairs)
-#
-#     assert are_equal
+def test_get_boundary_pairs_in_watersheds_d4():
 
+    num_of_cols = 7
+    num_of_rows = 7
+    watersheds = [np.array([8, 9, 15, 16, 22]),
+                  np.array([10, 11, 12, 17, 18, 19, 23, 24, 25, 26, 32, 33, 39, 40]),
+                  np.array([29, 30, 31, 36, 37, 38])]
 
-# def test_get_boundary_pairs_in_watersheds_exclude_domain_large():
-#
-#     num_of_cols = 9
-#     num_of_rows = 9
-#     watersheds = [np.array([10, 11, 12, 13, 19, 20, 21, 22, 28, 29, 30, 37, 38, 39]),
-#                   np.array([14, 15, 16, 23, 24, 25, 31, 32, 33, 34, 40, 41, 42, 43, 51, 52, 60, 61, 69, 70]),
-#                   np.array([46, 47, 48, 49, 50, 55, 56, 57, 58, 59, 64, 65, 66, 67, 68])]
-#
-#     result_boundary_pairs = [[np.array([13, 13, 22, 22, 22, 22, 21, 30, 30, 37, 37, 38, 38, 38, 39, 39, 39, 39, 39]),
-#                               np.array([14, 23, 14, 23, 31, 32, 31, 31, 40, 46, 47, 46, 47, 48, 31, 40, 47, 48, 49])],
-#                              [np.array([14, 14, 23, 23, 31, 31, 31, 31, 32, 40, 40, 40, 40, 40, 41, 41, 42, 51, 51, 60, 60, 60, 69, 69]),
-#                               np.array([13, 22, 13, 22, 21, 22, 30, 39, 22, 30, 39, 48, 49, 50, 49, 50, 50, 50, 59, 50, 59, 68, 59, 68])],
-#                              [np.array([46, 46, 47, 47, 47, 48, 48, 48, 49, 49, 49, 50, 50, 50, 50, 50, 59, 59, 59, 68, 68]),
-#                               np.array([37, 38, 37, 38, 39, 38, 39, 40, 39, 40, 41, 40, 41, 42, 51, 60, 51, 60, 69, 60, 69])]]
-#
-#     boundary_pairs = util.get_all_boundary_pairs_in_watersheds(watersheds, num_of_cols, num_of_rows)
-#
-#     are_equal = compare_methods.compare_list_of_lists_by_comparing_sets(boundary_pairs, result_boundary_pairs)
-#
-#     assert are_equal
+    result_boundary_pairs = [[np.array([9, 9, 16, 16, 8, 8, 15, 22, 22, 22]),
+                              np.array([2, 10, 17, 23, 1, 7, 14, 21, 23, 29])],
+                             [np.array([10, 10, 11, 12, 12, 19, 26, 33, 40, 40, 39, 39, 32, 24, 23, 23, 23, 17]),
+                              np.array([3, 9, 4, 5, 13, 20, 27, 34, 41, 47, 38, 46, 31, 31, 16, 22, 30, 16])],
+                             [np.array([29, 29, 30, 31, 31, 38, 38, 37, 36, 36]),
+                              np.array([22, 28, 23, 24, 32, 39, 45, 44, 35, 43])]]
+
+    boundary_pairs = util.get_boundary_pairs_in_watersheds(watersheds, num_of_cols, num_of_rows, d4=True)
+    print boundary_pairs
+    are_equal = compare_methods.compare_list_of_lists_by_comparing_sets(boundary_pairs, result_boundary_pairs)
+
+    assert are_equal
 
 
 def test_get_boundary_pairs_for_specific_watersheds():
@@ -583,7 +814,30 @@ def test_get_boundary_pairs_for_specific_watersheds():
                               np.array([0, 1, 2, 10, 20, 1, 2, 3, 13, 23, 10, 20, 30, 13, 23, 33, 20, 30, 40,
                                         41, 42, 23, 33, 41, 42, 43])]]
 
-    boundary_pairs = util.get_boundary_pairs_for_specific_watersheds(merged_watersheds, nx)
+    boundary_pairs = util.get_boundary_pairs_for_specific_watersheds(merged_watersheds, nx, d4=False)
+
+    assert compare_methods.compare_list_of_lists_by_comparing_sets(boundary_pairs, result_boundary_pairs)
+
+
+def test_get_boundary_pairs_for_specific_watersheds_d4():
+
+    nx = 10
+
+    merged_watersheds = [np.array([35, 33, 34]),
+                         np.array([63, 64, 65, 73, 74, 75, 83, 84, 85]),
+                         np.array([38, 47, 48, 57, 58, 18, 28]),
+                         np.array([11, 12, 21, 22, 31, 32])]
+
+    result_boundary_pairs = [[np.array([35, 35, 35, 34, 34, 33, 33, 33]),
+                              np.array([25, 36, 45, 24, 44, 23, 32, 43])],
+                             [np.array([63, 63, 64, 65, 65, 75, 85, 85, 84, 83, 83, 73]),
+                              np.array([53, 62, 54, 55, 66, 76, 86, 95, 94, 82, 93, 72])],
+                             [np.array([18, 18, 18, 28, 28, 38, 38, 47, 47, 48, 57, 57, 58, 58]),
+                              np.array([8, 17, 19, 27, 29, 37, 39, 37, 46, 49, 56, 67, 59, 68])],
+                             [np.array([11, 11, 12, 12, 21, 22, 31, 31, 32, 32]),
+                              np.array([1, 10, 2, 13, 20, 23, 30, 41, 33, 42])]]
+
+    boundary_pairs = util.get_boundary_pairs_for_specific_watersheds(merged_watersheds, nx, d4=True)
 
     assert compare_methods.compare_list_of_lists_by_comparing_sets(boundary_pairs, result_boundary_pairs)
 
@@ -628,7 +882,29 @@ def test_get_steepest_spill_pair():
 
     result_steepest_spill_pairs = {(8, 0), (32, 31), (31, 25)}
 
-    steepest_spill_pairs = util.get_steepest_spill_pair(heights, spill_pairs)
+    steepest_spill_pairs = util.get_steepest_spill_pair(heights, spill_pairs, d4=False)
+
+    assert steepest_spill_pairs == result_steepest_spill_pairs
+
+
+def test_get_steepest_spill_pair_d4():
+
+    heights = np.array([[10, 10, 10, 10, 10, 10, 10],
+                        [4, 1, 8, 7, 7, 7, 10],
+                        [10, 6, 8, 5, 5, 5, 10],
+                        [10, 8, 8, 4, 2, 4, 10],
+                        [10, 9, 9, 3, 3, 3, 10],
+                        [10, 0, 1, 5, 5, 5, 10],
+                        [10, 10, 10, 10, 10, 10, 10]])
+    spill_pairs = [[np.array([33]), np.array([32])],
+                   [np.array([38, 38]), np.array([31, 39])],
+                   [np.array([8]), np.array([7])],
+                   [np.array([32, 32]), np.array([33, 31])],
+                   [np.array([31]), np.array([32])]]
+
+    result_steepest_spill_pairs = {(33, 32), (38, 31), (8, 7), (32, 33), (31, 32)}
+
+    steepest_spill_pairs = util.get_steepest_spill_pair(heights, spill_pairs, d4=True)
 
     assert steepest_spill_pairs == result_steepest_spill_pairs
 
@@ -726,7 +1002,25 @@ def test_combine_watersheds_spilling_into_each_other():
     result_watersheds = [np.array([9, 10, 11, 12]),
                          np.array([13, 14])]
 
-    watersheds, steepest_spill_pairs = util.combine_watersheds_spilling_into_each_other(watersheds, heights)
+    watersheds, steepest_spill_pairs = util.combine_watersheds_spilling_into_each_other(watersheds, heights, d4=False)
+
+    assert compare_methods.compare_watersheds(watersheds, result_watersheds)
+
+
+def test_combine_watersheds_spilling_into_each_other_d4():
+
+    heights = np.array([[10, 10, 10, 10, 10, 10, 10, 10],
+                        [10, 4, 5, 4, 15, 3, 9, 2],
+                        [10, 10, 10, 10, 10, 10, 10, 10]])
+    watersheds = [np.array([9]),
+                  np.array([10, 11]),
+                  np.array([12, 13]),
+                  np.array([14])]
+    result_watersheds = [np.array([9, 10, 11]),
+                         np.array([12, 13]),
+                         np.array([14])]
+
+    watersheds, steepest_spill_pairs = util.combine_watersheds_spilling_into_each_other(watersheds, heights, d4=True)
 
     assert compare_methods.compare_watersheds(watersheds, result_watersheds)
 
@@ -743,7 +1037,32 @@ def test_combine_watersheds_spilling_into_each_other_simple():
     result_watersheds = [np.array([10, 11, 12, 19, 20, 21, 28, 29, 30,
                                    13, 14, 15, 16, 22, 23, 24, 25, 31, 32, 33, 34])]
 
-    watersheds, steepest_spill_pairs = util.combine_watersheds_spilling_into_each_other(watersheds, heights)
+    watersheds, steepest_spill_pairs = util.combine_watersheds_spilling_into_each_other(watersheds, heights, d4=False)
+
+    assert compare_methods.compare_watersheds(watersheds, result_watersheds)
+
+
+def test_combine_watersheds_spilling_into_each_other_simple_d4():
+
+    heights = np.array([[3, 3, 3, 3, 3, 3, 3, 3, 3],
+                        [3, 1, 1, 1, 2, 1, 1, 1, 3],
+                        [3, 1, 0, 1, 2, 1, 0, 1, 3],
+                        [3, 1, 1, 1, 2, 1, 1, 1, 3],
+                        [3, 3, 3, 3, 3, 3, 3, 3, 3]])
+    watersheds = [np.array([10]),
+                  np.array([11, 19, 20, 21, 29]),
+                  np.array([28]),
+                  np.array([12]),
+                  np.array([30]),
+                  np.array([13, 14]),
+                  np.array([31, 32]),
+                  np.array([15, 22, 23, 24, 25, 33]),
+                  np.array([16]),
+                  np.array([34])]
+    result_watersheds = [np.array([10, 11, 12, 19, 20, 21, 28, 29, 30,
+                                   13, 14, 15, 16, 22, 23, 24, 25, 31, 32, 33, 34])]
+
+    watersheds, steepest_spill_pairs = util.combine_watersheds_spilling_into_each_other(watersheds, heights, d4=True)
 
     assert compare_methods.compare_watersheds(watersheds, result_watersheds)
 
@@ -1000,7 +1319,23 @@ def test_make_depressionless_hole():
                                [5, 5, 5],
                                [5, 5, 5]])
 
-    new_heights = util.make_depressionless(heights, step_size)
+    new_heights = util.make_depressionless(heights, step_size, d4=False)
+
+    assert np.array_equal(new_heights, result_heights)
+
+
+def test_make_depressionless_hole_d4():
+
+    step_size = 10
+    heights = np.array([[5, 5, 5],
+                        [5, 0, 5],
+                        [5, 5, 5]])
+
+    result_heights = np.array([[5, 5, 5],
+                               [5, 5, 5],
+                               [5, 5, 5]])
+
+    new_heights = util.make_depressionless(heights, step_size, d4=True)
 
     assert np.array_equal(new_heights, result_heights)
 
@@ -1020,7 +1355,27 @@ def test_make_depressionless_two_plateaus():
                                [4, 2, 4],
                                [4, 2, 4]])
 
-    new_heights = util.make_depressionless(heights, step_size)
+    new_heights = util.make_depressionless(heights, step_size, d4=False)
+
+    assert np.array_equal(new_heights, result_heights)
+
+
+def test_make_depressionless_two_plateaus_d4():
+
+    step_size = 10
+    heights = np.array([[4, 4, 4],
+                        [4, 0, 4],
+                        [4, 3, 4],
+                        [4, 0, 4],
+                        [4, 2, 4]])
+
+    result_heights = np.array([[4, 4, 4],
+                               [4, 3, 4],
+                               [4, 3, 4],
+                               [4, 2, 4],
+                               [4, 2, 4]])
+
+    new_heights = util.make_depressionless(heights, step_size, d4=True)
 
     assert np.array_equal(new_heights, result_heights)
 
@@ -1036,7 +1391,23 @@ def test_make_depressionless_tower():
                                [5, 10, 5],
                                [5, 5, 5]])
 
-    new_heights = util.make_depressionless(heights, step_size)
+    new_heights = util.make_depressionless(heights, step_size, d4=False)
+
+    assert np.array_equal(new_heights, result_heights)
+
+
+def test_make_depressionless_tower_d4():
+
+    step_size = 10
+    heights = np.array([[5, 5, 5],
+                        [5, 10, 5],
+                        [5, 5, 5]])
+
+    result_heights = np.array([[5, 5, 5],
+                               [5, 10, 5],
+                               [5, 5, 5]])
+
+    new_heights = util.make_depressionless(heights, step_size, d4=True)
 
     assert np.array_equal(new_heights, result_heights)
 
@@ -1054,6 +1425,64 @@ def test_make_depressionless_pit():
                                [5, 1, 1, 5],
                                [5, 5, 5, 1]])
 
-    new_heights = util.make_depressionless(heights, step_size)
+    new_heights = util.make_depressionless(heights, step_size, d4=False)
+
+    assert np.array_equal(new_heights, result_heights)
+
+
+def test_make_depressionless_pit_d4():
+
+    step_size = 10
+    heights = np.array([[5, 5, 5, 5],
+                        [5, 0, 1, 5],
+                        [5, 1, 1, 5],
+                        [5, 5, 5, 1]])
+
+    result_heights = np.array([[5, 5, 5, 5],
+                               [5, 5, 5, 5],
+                               [5, 5, 5, 5],
+                               [5, 5, 5, 1]])
+
+    new_heights = util.make_depressionless(heights, step_size, d4=True)
+
+    assert np.array_equal(new_heights, result_heights)
+
+
+def test_make_depressionless_three_depressions():
+
+    step_size = 10
+    heights = np.array([[1, 2, 2, 2, 2],
+                        [2, 0, 2, 1, 2],
+                        [3, 3, 3, 1, 2],
+                        [3, 2, 3, 2, 2],
+                        [3, 3, 3, 2, 2]])
+
+    result_heights = np.array([[1, 2, 2, 2, 2],
+                               [2, 1, 2, 2, 2],
+                               [3, 3, 3, 2, 2],
+                               [3, 3, 3, 2, 2],
+                               [3, 3, 3, 2, 2]])
+
+    new_heights = util.make_depressionless(heights, step_size, d4=False)
+
+    assert np.array_equal(new_heights, result_heights)
+
+
+def test_make_depressionless_three_depressions_d4():
+
+    step_size = 10
+    heights = np.array([[1, 2, 2, 2, 2],
+                        [2, 0, 2, 1, 2],
+                        [3, 3, 3, 1, 2],
+                        [3, 2, 3, 2, 2],
+                        [3, 3, 3, 2, 2]])
+
+    result_heights = np.array([[1, 2, 2, 2, 2],
+                               [2, 2, 2, 2, 2],
+                               [3, 3, 3, 2, 2],
+                               [3, 3, 3, 2, 2],
+                               [3, 3, 3, 2, 2]])
+
+    new_heights = util.make_depressionless(heights, step_size, d4=True)
 
     assert np.array_equal(new_heights, result_heights)
