@@ -96,7 +96,7 @@ def get_landscape_tyrifjorden(file_name):
 
 def get_smallest_test_landscape_tyrifjorden(file_name):
 
-    size = 500
+    size = 250
     data_set = load_ds(file_name)
     heights = get_array_from_band(data_set)
     heights = heights[0:-1, 1:]
@@ -115,7 +115,7 @@ def get_smallest_test_landscape_tyrifjorden(file_name):
 
 def get_smallest_test_landscape(file_name):
 
-    size = 5000
+    size = 1000
     data_set = load_ds(file_name)
     heights = get_array_from_band(data_set)
     heights = heights[0:size, 0:size]
