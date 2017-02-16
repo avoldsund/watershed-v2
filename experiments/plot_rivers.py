@@ -11,14 +11,16 @@ saved_files = '/home/anderovo/Dropbox/watershedLargeFiles/'
 
 landscape = pickle.load(open(saved_files + 'landscape.pkl', 'rb'))
 watersheds = pickle.load(open(saved_files + 'watersheds.pkl', 'rb'))
-thresholded_watersheds = pickle.load(open(saved_files + 'watershedsThreshold25.pkl', 'rb'))
+thresholded_watersheds = pickle.load(open(saved_files + 'watershedsThreshold500.pkl', 'rb'))
 steepest_spill_pairs = pickle.load(open(saved_files + 'steepestSpillPairs.pkl', 'rb'))
 flow_directions = pickle.load(open(saved_files + 'flowDirections.pkl', 'rb'))
 spill_heights = pickle.load(open(saved_files + 'spillHeights.pkl', 'rb'))
 all_traps = pickle.load(open(saved_files + 'allTraps.pkl', 'rb'))
 size_of_traps = pickle.load(open(saved_files + 'sizeOfTraps.pkl', 'rb'))
 
-threshold = 25
+print len(thresholded_watersheds)
+print len(steepest_spill_pairs)
+threshold = 500
 thresholded_traps = [all_traps[i] for i in range(len(all_traps)) if size_of_traps[i] > threshold]
 
 # Plot all rivers
