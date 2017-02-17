@@ -43,6 +43,26 @@ def compare_two_lists_of_arrays(l1, l2):
     return True
 
 
+def compare_two_lists_of_unsorted_arrays(l1, l2):
+    """
+    List with arrays as elements. Each array is sorted.
+    Returns True if the two lists have equal elements, without the same order necessarily.
+    :param l1: List of arrays 1.
+    :param l2: List of arrays 2.
+    :return: True if the lists are equal, False if not.
+    """
+
+    if len(l1) != len(l2):  # Test if the length of the lists are equal
+        return False
+    else:
+        for i in range(len(l1)):  # The arrays must have the same ordering
+            arrays_are_equal = np.array_equal(np.sort(l1[i]), np.sort(l2[i]))
+            if not arrays_are_equal:
+                return False
+
+    return True
+
+
 def compare_list_of_lists_by_comparing_sets(l1, l2):
     """
     List of lists as elements. The lists must have the same number of lists, and have the same pairs

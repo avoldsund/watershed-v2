@@ -291,3 +291,58 @@ def test_compare_minima_watersheds_four():
     are_equal = compare_methods.compare_minima_watersheds(d1, d2)
 
     assert are_equal is True
+
+
+def test_compare_two_lists_of_unsorted_arrays_one():
+    # Different lengths of lists
+
+    l1 = [np.array([1, 2, 3])]
+    l2 = [np.array([1, 2, 3]), np.array([4, 5, 6])]
+
+    are_equal = compare_methods.compare_two_lists_of_unsorted_arrays(l1, l2)
+
+    assert are_equal is False
+
+
+def test_compare_two_lists_of_unsorted_arrays_two():
+    # Same length, one different element
+
+    l1 = [np.array([1, 2, 3]), np.array([5, 6, 7])]
+    l2 = [np.array([1, 2, 3]), np.array([4, 5, 6])]
+
+    are_equal = compare_methods.compare_two_lists_of_unsorted_arrays(l1, l2)
+
+    assert are_equal is False
+
+
+def test_compare_two_lists_of_unsorted_arrays_three():
+    # Same length, same elements in different order
+
+    l1 = [np.array([4, 5, 6]), np.array([1, 2, 3])]
+    l2 = [np.array([1, 2, 3]), np.array([4, 5, 6])]
+
+    are_equal = compare_methods.compare_two_lists_of_unsorted_arrays(l1, l2)
+
+    assert are_equal is False
+
+
+def test_compare_two_lists_of_unsorted_arrays_four():
+    # Same length, same order of elements, but different sorting
+
+    l1 = [np.array([1, 2, 3]), np.array([4, 5, 6])]
+    l2 = [np.array([3, 1, 2]), np.array([6, 5, 4])]
+
+    are_equal = compare_methods.compare_two_lists_of_unsorted_arrays(l1, l2)
+
+    assert are_equal is True
+
+
+def test_compare_two_lists_of_unsorted_arrays_five():
+    # Exactly the same list
+
+    l1 = [np.array([1, 2, 3]), np.array([4, 5, 6])]
+    l2 = [np.array([1, 2, 3]), np.array([4, 5, 6])]
+
+    are_equal = compare_methods.compare_two_lists_of_unsorted_arrays(l1, l2)
+
+    assert are_equal is True
