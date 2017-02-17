@@ -1069,7 +1069,7 @@ def calculate_watersheds(heights, dim_x, dim_y, step_size, d4):
     local_minima = np.asarray(local_watersheds.keys())
     combined_minima = combine_minima(local_minima, dim_y, dim_x, d4)
     watersheds = combine_watersheds(local_watersheds, combined_minima)
-    watersheds, steepest_spill_pairs = combine_watersheds_spilling_into_each_other(watersheds, heights)
+    watersheds, steepest_spill_pairs = combine_watersheds_spilling_into_each_other(watersheds, heights, d4)
 
     return watersheds, steepest_spill_pairs, flow_directions
 

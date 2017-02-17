@@ -510,7 +510,7 @@ def calculate_watershed_of_node(landscape, outlet_coords_r_c, d4):
     # Create connections and expand matrix to accommodate trap nodes
     node_conn_mat = util.make_sparse_node_conn_matrix(flow, landscape.ny, landscape.nx)
     node_conn_mat = expand_conn_mat(node_conn_mat, len(traps))
-    expanded_conn_mat = reroute_trap_connections(node_conn_mat, landscape.ny, landscape.nx, traps, steepest)
+    expanded_conn_mat = reroute_trap_connections(node_conn_mat, landscape.ny, landscape.nx, traps, steepest, d4)
 
     # Get the watershed of the node
     ws_of_node, trap_nodes_in_ws = get_watershed_of_node(outlet_coords_r_c, expanded_conn_mat, traps, landscape.ny, landscape.nx)
@@ -518,39 +518,39 @@ def calculate_watershed_of_node(landscape, outlet_coords_r_c, d4):
     return ws_of_node, traps, spill_heights, trap_nodes_in_ws, steepest, flow_dir, landscape.heights
 
 
-def calculate_accumulated_flow(landscape):
+def calculate_accumulated_flow(landscape, d4):
 
     landscape.heights = util.fill_single_cell_depressions(landscape.heights, landscape.ny, landscape.nx)
     watersheds, steepest, flow_dir = util.calculate_watersheds(landscape.heights, landscape.nx, landscape.ny,
-                                                               landscape.step_size)
+                                                               landscape.step_size, d4)
     spill_heights = util.get_spill_heights(watersheds, landscape.heights, steepest)
     traps, size_of_traps = util.get_all_traps(watersheds, landscape.heights, spill_heights)
 
     # Increase heights of traps and recalculate flow. Remove flow from some indices in traps.
     util.make_landscape_depressionless(watersheds, steepest, landscape)
-    flow = util.get_flow_direction_indices(landscape.heights, landscape.step_size, landscape.ny, landscape.nx)
+    flow = util.get_flow_direction_indices(landscape.heights, landscape.step_size, landscape.ny, landscape.nx, d4)
     for i in range(len(traps)):
         trap_in_2d = util.map_1d_to_2d(traps[i], landscape.nx)
         flow[trap_in_2d] = -1
 
     node_conn_mat = util.make_sparse_node_conn_matrix(flow, landscape.ny, landscape.nx)
-    upslope_cells = calculate_nr_of_upslope_cells(node_conn_mat, landscape.ny, landscape.nx, traps, steepest)
+    upslope_cells = calculate_nr_of_upslope_cells(node_conn_mat, landscape.ny, landscape.nx, traps, steepest, d4)
 
     return upslope_cells
 
 
-def calculate_watershed_of_node_no_landscape_input(heights, nx, ny, step_size, outlet_coords_r_c):
+def calculate_watershed_of_node_no_landscape_input(heights, nx, ny, step_size, outlet_coords_r_c, d4):
     # Does not require landscape as input
 
     heights = util.fill_single_cell_depressions(heights, ny, nx)
-    watersheds, steepest, flow_dir = util.calculate_watersheds(heights, nx, ny, step_size)
+    watersheds, steepest, flow_dir = util.calculate_watersheds(heights, nx, ny, step_size, d4)
     spill_heights = util.get_spill_heights(watersheds, heights, steepest)
     traps, size_of_traps = util.get_all_traps(watersheds, heights, spill_heights)
 
     # Increase heights of traps and recalculate flow. Remove flow from some indices in traps.
     util.make_landscape_depressionless_no_landscape_input(watersheds, steepest, heights, ny)
-    flow = util.get_flow_direction_indices(heights, step_size, ny, nx)
-    flow_dir = util.get_flow_directions(heights, step_size, ny, nx)
+    flow = util.get_flow_direction_indices(heights, step_size, ny, nx, d4)
+    flow_dir = util.get_flow_directions(heights, step_size, ny, nx, d4)
 
     for i in range(len(traps)):
         trap_in_2d = util.map_1d_to_2d(traps[i], nx)
@@ -559,7 +559,7 @@ def calculate_watershed_of_node_no_landscape_input(heights, nx, ny, step_size, o
     # Create connections and expand matrix to accommodate trap nodes
     node_conn_mat = util.make_sparse_node_conn_matrix(flow, ny, nx)
     node_conn_mat = expand_conn_mat(node_conn_mat, len(traps))
-    expanded_conn_mat = reroute_trap_connections(node_conn_mat, ny, nx, traps, steepest)
+    expanded_conn_mat = reroute_trap_connections(node_conn_mat, ny, nx, traps, steepest, d4)
 
     # Get the watershed of the node
     ws_of_node, trap_nodes_in_ws = get_watershed_of_node(outlet_coords_r_c, expanded_conn_mat, traps, ny, nx)

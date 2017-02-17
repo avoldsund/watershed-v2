@@ -765,23 +765,89 @@ def test_get_watershed_of_node_start_node_in_trap_with_upslope_area():
     assert np.array_equal(ws_of_node, result_ws_of_node)
 
 
-# def test_make_velocity_field():
-#
-#     outlet = 28
-#     heights = np.array([[10, 10, 10, 10, 10, 10],
-#                         [10, 9, 9, 9, 7, 10],
-#                         [10, 9, 10, 9, 7, 10],
-#                         [10, 10, 10, 10, 7, 10],
-#                         [10, 4, 4, 4, 4.5, 10],
-#                         [10, 4, 10, 10, 10, 10]])
-#     flow_directions = np.array([[None, None, None, None, None, None],
-#                                 [None, -1, -1, 10, -1, None],
-#                                 [None, -1, 15, 16, -1, None],
-#                                 [None, 25, 26, 27, 28, None],
-#                                 [None, -1, -1, -1, 27, None],
-#                                 [None, None, None, None, None, None]])
-#     ws_indices_1d = np.array([7, 8, 9, 10, 13, 14, 15, 16, 22])
-#
-#     result = None
-#
-#     a = river_analysis.make_velocity_field(ws_indices_1d, flow_directions, heights)
+def test_calculate_watershed_of_node_no_landscape_input_d4():
+
+    nx = 6
+    ny = 6
+    step_size = 10
+    outlet_coords = (4, 1)
+    d4method = True
+    heights = np.array([[10, 10, 10, 10, 10, 10],
+                        [8, 9, 9, 9, 7, 10],
+                        [10, 9, 10, 9, 7, 10],
+                        [10, 10, 10, 10, 7, 10],
+                        [10, 4, 4, 4, 4.5, 10],
+                        [10, 4, 10, 10, 10, 10]])
+
+    result_ws_of_node = np.array([9, 10, 14, 15, 16, 19, 20, 21, 22, 25, 26, 27, 28])
+    result_traps = [np.array([7, 8, 13]), np.array([10, 16]), np.array([25, 26, 27])]
+    result_trap_indices_in_ws = np.array([1, 2])
+    result_trap_heights = np.array([9, 7, 4])
+    result_steepest_spill_pairs = [(7, 6), (16, 22), (25, 31)]
+    result_flow_directions = np.array([[None, None, None, None, None, None],
+                                       [None, 3, -1, 1, -1, None],
+                                       [None, -1, 1, 1, -1, None],
+                                       [None, 2, 2, 2, 2, None],
+                                       [None, -1, -1, -1, 3, None],
+                                       [None, None, None, None, None, None]])
+    result_heights = np.array([[10, 10, 10, 10, 10, 10],
+                               [8, 9, 9, 9, 7, 10],
+                               [10, 9, 10, 9, 7, 10],
+                               [10, 10, 10, 10, 7, 10],
+                               [10, 4, 4, 4, 4.5, 10],
+                               [10, 4, 10, 10, 10, 10]])
+
+    ws_of_node, traps, trap_heights, trap_indices_in_ws, steepest_spill_pairs, flow_directions, heights = \
+        river_analysis.calculate_watershed_of_node_no_landscape_input(heights, nx, ny, step_size, outlet_coords, d4method)
+    ws_of_node = np.sort(ws_of_node)
+
+    all_is_equal = np.array_equal(ws_of_node, result_ws_of_node) and \
+        compare_methods.compare_two_lists_of_unsorted_arrays(traps, result_traps) and \
+        np.array_equal(trap_heights, result_trap_heights) and \
+        np.array_equal(trap_indices_in_ws, result_trap_indices_in_ws) and \
+        steepest_spill_pairs == result_steepest_spill_pairs and \
+        np.array_equal(flow_directions, result_flow_directions) and \
+        np.array_equal(heights, result_heights)
+
+    assert all_is_equal
+
+
+def test_calculate_watershed_of_node_no_landscape_input():
+
+    nx = 6
+    ny = 6
+    step_size = 10
+    outlet_coords = (4, 2)
+    d4method = False
+    result_heights = np.array([[10, 10, 10, 10, 10, 10],
+                               [10, 9, 9, 9, 7, 10],
+                               [10, 9, 10, 9, 7, 10],
+                               [8, 10, 10, 10, 7, 10],
+                               [10, 4, 4, 4, 4.5, 10],
+                               [10, 4, 10, 10, 10, 10]])
+
+    result_ws_of_node = np.array([9, 10, 14, 15, 16, 19, 20, 21, 22, 25, 26, 27, 28])
+    result_traps = [np.array([7, 8, 13]), np.array([10, 16]), np.array([25, 26, 27])]
+    result_trap_indices_in_ws = np.array([1, 2])
+    result_trap_heights = np.array([9, 7, 4])
+    result_steepest_spill_pairs = [(13, 18), (16, 22), (26, 31)]
+    result_flow_directions = np.array([[None, None, None, None, None, None],
+                                       [None, -1, -1, 2, -1, None],
+                                       [None, 16, 2, 2, -1, None],
+                                       [None, 8, 8, 8, 8, None],
+                                       [None, -1, -1, -1, 32, None],
+                                       [None, None, None, None, None, None]])
+
+    ws_of_node, traps, trap_heights, trap_indices_in_ws, steepest_spill_pairs, flow_directions, heights = \
+        river_analysis.calculate_watershed_of_node_no_landscape_input(result_heights, nx, ny, step_size, outlet_coords, d4method)
+    ws_of_node = np.sort(ws_of_node)
+
+    all_is_equal = np.array_equal(ws_of_node, result_ws_of_node) and \
+        compare_methods.compare_two_lists_of_unsorted_arrays(traps, result_traps) and \
+        np.array_equal(trap_heights, result_trap_heights) and \
+        np.array_equal(trap_indices_in_ws, result_trap_indices_in_ws) and \
+        steepest_spill_pairs == result_steepest_spill_pairs and \
+        np.array_equal(flow_directions, result_flow_directions) and \
+        np.array_equal(heights, result_heights)
+
+    assert all_is_equal
