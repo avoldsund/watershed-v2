@@ -76,7 +76,7 @@ def plot_watersheds_2d(watersheds, outlet, landscape, ds):
     """
 
     nr_of_watersheds = len(watersheds)
-    boundary_pairs = util.get_boundary_pairs_in_watersheds(watersheds, landscape.nx, landscape.ny)
+    # boundary_pairs = util.get_boundary_pairs_in_watersheds(watersheds, landscape.nx, landscape.ny)
 
     color_hex = ['#e41a1c', '#377eb8', '#4daf4a', '#984ea3', '#ff7f00', '#ffff33', '#a65628', '#f781bf']
     if len(watersheds) < 3:
