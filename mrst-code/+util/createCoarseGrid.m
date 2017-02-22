@@ -1,4 +1,4 @@
-function CG = createCoarseGrid(watershed, heights, traps, nrOfTraps)
+function CG = createCoarseGrid(watershed, heights, traps, nrOfTraps, spillPairs)
 %CREATECOARSEGRID Summary of this function goes here
 %   Detailed explanation goes here
 
@@ -12,9 +12,10 @@ rmCells = setdiff(1 : nCols * nRows, watershed);
 G = removeCells(G, rmCells);
 
 % Combine traps and coarsen gridnrOfTraps
-partition = util.fixPartitioning(G, traps, nrOfTraps);
+[partition, spillPoints] = util.fixPartitioning(G, traps, nrOfTraps, spillPairs);
 CG = generateCoarseGrid(G, partition);
 CG = coarsenGeometry(CG);
+CG.spillPoints = spillPoints;
 
 end
 

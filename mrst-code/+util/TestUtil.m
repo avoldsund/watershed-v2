@@ -157,16 +157,21 @@ classdef TestUtil < matlab.unittest.TestCase
             traps{2,1} = [4, 4, 4];
             traps{2,2} = [1, 2, 3];
             nrOfTraps = 2;
-            flowDirections = [0, 0, 0, 0, 0, 0; 0, -1, -1, 2, -1, 0;
-                              0, 16, 2, 2, -1, 0; 0, 8, 8, 8, 8, 0;
-                              0, -1, -1, -1, 32, 0; 0, 0, 0, 0, 0, 0];
+            
+            spillPairs = [23, 9]';
+            flowDirections = [0, 0, 0, 0, 0, 0; 
+                              0, -1, -1, 2, -1, 0;
+                              0, 16, 2, 2, 8, 0;
+                              0, 8, 8, 8, 8, 0;
+                              0, -1, 16, -1, 32, 0;
+                              0, 0, 0, 0, 0, 0];
             fd = rot90(flowDirections, -1);  % Fix 1d-indexing
             
             CG = util.createCoarseGrid(watershed, heights, traps, nrOfTraps);
-            CG.cells.fd = [32, 8, 8, 8, 8, 2, 2, 2, -1, -1]';
+            CG.cells.fd = [32, 8, 8, 8, 8, 2, 2, 2, 8, 16]';
             
-            actSolution = util.getFlowDirections(CG, fd, nrOfTraps);
-            expSolution = [-1, 0; 0, -1; 0, -1; 0, -1; 0, -1; 1, 0; 1, 0; 1, 0; 0, 0; 0, 0;];
+            actSolution = util.getFlowDirections(CG, fd, nrOfTraps, spillPairs);
+            expSolution = [-1, 0; 0, -1; 0, -1; 0, -1; 0, -1; 1, 0; 1, 0; 1, 0; 0, -1; -1, -1;];
             testCase.assertEqual(actSolution, expSolution)
         end
         

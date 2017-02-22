@@ -1,4 +1,4 @@
-function partition = fixPartitioning(G, traps, nrOfTraps)
+function [partition, spillPoints] = fixPartitioning(G, traps, nrOfTraps, spillPairs)
 % FIXPARTITIONING Creates the partitioning necessary to coarsen the grid.
 %   partition = FIXPARTITIONING(G, TRAPS, NROFTRAPS) returns a partitioning
 %   using the grid structure, the traps and the nr of traps.
@@ -28,6 +28,8 @@ function partition = fixPartitioning(G, traps, nrOfTraps)
 nCols = G.cartDims(1);
 nRows = G.cartDims(2);
 traps = util.mapListOfCoordsToIndices(traps, nCols, nRows);
+spillPairs = util.mapListOfCoordsToIndices(spillPairs, nCols, nRows);
+spillPoints = zeros(size(spillPairs, 1), 1);
 
 totalCells = G.cartDims(1) * G.cartDims(2);
 map = zeros(totalCells, 1);
@@ -36,7 +38,9 @@ partition = 1:G.cells.num;
 
 for i = 1:nrOfTraps
     tCells = traps{i};
+    spillPoint = spillPairs(i);
     trapIndices = map(tCells);
+    spillPoints(i) = map(spillPoint);
     partition(trapIndices) = G.cells.num + i;
 end
 
