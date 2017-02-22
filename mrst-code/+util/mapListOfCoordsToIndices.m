@@ -25,11 +25,22 @@ function listOfIndices = mapListOfCoordsToIndices(listOfCoords, nCols, nRows)
 %       return listOfIndices
 
     N = size(listOfCoords, 1);
-    listOfIndices = cell(N, 1);
+    
+    if iscell(listOfCoords)
+        listOfIndices = cell(N, 1);
+    else
+        listOfIndices = zeros(N, 1);
+    end
     
     for i = 1:N
-        coords = horzcat(listOfCoords{i, 1}', listOfCoords{i, 2}');
-        listOfIndices{i} = util.mapCoordsToIndices(coords, nCols, nRows);
+        if iscell(listOfCoords)
+            coords = horzcat(listOfCoords{i, 1}', listOfCoords{i, 2}');
+            listOfIndices{i} = util.mapCoordsToIndices(coords, nCols, nRows);
+        else
+            coords = horzcat(listOfCoords(i, 1)', listOfCoords(i, 2)');
+            listOfIndices(i) = util.mapCoordsToIndices(coords, nCols, nRows);
+        end
+        
     end
     
 end
