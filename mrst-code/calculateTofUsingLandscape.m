@@ -8,17 +8,19 @@ load('watershed.mat');
 load('heights.mat');
 load('traps.mat');
 load('flowDirections.mat')
+load('steepest.mat')
 
 [nRows, nCols] = size(heights);
 totalCells = nRows * nCols;
-
+%%
 % Pre-process input data
 heights = rot90(heights, -1);  % Fix 1d-indexing
 fd = rot90(flowDirections, -1);  % Fix 1d-indexing
 ws = util.mapCoordsToIndices(watershed', nCols, nRows);
+spillPairsIndices = util.mapListOfCoordsToIndices(spillPairs, nCols, nRows);
 
 % Create coarse grid and set heights
-CG = util.createCoarseGrid(ws, heights, traps, nrOfTraps);
+CG = util.createCoarseGrid(ws, heights, traps, nrOfTraps, spillPairs);
 CG.cells.z = util.setHeightsCoarseGrid(CG, heights, trapHeights, nrOfTraps);
 
 figure();
@@ -28,10 +30,9 @@ plotCellData(CG,(1:CG.cells.num)','EdgeColor','w','EdgeAlpha',.2);
 plotFaces(CG,(1:CG.faces.num)', 'FaceColor','none','LineWidth',2);
 colormap(.5*(colorcube(20) + ones(20,3))); axis off
 
-
 %% Show cell/block indices
-% In its basic form, the structure onl347y represents topological information
-% that specifies the relationship betwflow_directionseen blocks and block interfaces, etc.
+% In its basic form, the structure only represents topological information
+% that specifies the relationship between blocks and block interfaces, etc.
 % The structure also contains information of the underlying fine grid. Let
 % us start by plotting cell/block indices
 tg = text(CG.parent.cells.centroids(:,1), CG.parent.cells.centroids(:,2), ...
@@ -51,33 +52,24 @@ tcg = text(CG.faces.centroids(:,1), CG.faces.centroids(:,2), ...
 set(tcg,'BackgroundColor','w','EdgeColor','none');
 
 %% Add flux field, state, rock and source
-
-
-CG.cells.fd = util.getFlowDirections(CG, fd, nrOfTraps);
+CG.cells.fd = util.getFlowDirections(CG, fd, nrOfTraps, spillPairsIndices);
 
 flux = util.setFlux(CG, nrOfTraps);
-
-%flux = zeros(CG.faces.num, 1);
-%indWithFlux = all(CG.faces.neighbors > 0, 2);
-%N = CG.faces.neighbors;
-%flux(indWithFlux) = (CG.cells.z(CG.faces.neighbors(indWithFlux, 1)) - CG.cells.z(CG.faces.neighbors(indWithFlux, 2)));
 
 state = struct('flux', flux);
 rock = struct('poro', ones(CG.cells.num, 1));
 
 % srcIx = map(util.mapCoordsToIndices(source, nCols, nRows));
-src = addSource([], 200, -10);
+src = addSource([], 80, -10);
 
-%% Plot the watershed cells
-newplot
-plotGrid(CG,'FaceColor',[0.95 0.95 0.95]); axis off;
-
-%% Perform time of flight computation
+% Perform time of flight computation
 max_i = 0;
 max_nonzero = 0;
-max_time = 100;
-
+max_time = 2500;
+figure()
 tof = computeTimeOfFlight(state, CG, rock, 'src', src, ...
    'maxTOF', max_time, 'reverse', true);
 
 clf,plotCellData(CG,tof);
+
+
