@@ -60,12 +60,10 @@ state = struct('flux', flux);
 rock = struct('poro', ones(CG.cells.num, 1));
 
 % srcIx = map(util.mapCoordsToIndices(source, nCols, nRows));
-src = addSource([], 80, -10);
+src = addSource([], 1870, -10);
 
 % Perform time of flight computation
-max_i = 0;
-max_nonzero = 0;
-max_time = 2500;
+max_time = 30000;
 figure()
 tof = computeTimeOfFlight(state, CG, rock, 'src', src, ...
    'maxTOF', max_time, 'reverse', true);

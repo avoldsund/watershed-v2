@@ -35,6 +35,20 @@ for i = 1:nrOfTraps
     faceFlowDirections(validInterval, :) = flowDirOnFaces;
 end
 
+% Correct face flow directions for cells with only two faces
+
+for i = 1:size(facesPerCell, 1) - nrOfTraps
+    if facesPerCell(i) == 2
+        interval = CG.cells.facePos(i):CG.cells.facePos(i+1)-1;
+        faceIx = CG.cells.faces(interval);
+        nbrs = CG.faces.neighbors(faceIx, :);
+        chosenIx = nbrs(find(nbrs ~= i)) > N;
+        chosenFace = faceIx(chosenIx);
+
+        faceFlowDirections(interval(chosenIx), :) = CG.faces.normals(chosenFace, :);
+    end
+end
+
 % Change faceFlowDirection for spill pair face to ensure flow out of trap
 for i = 1:nrOfTraps
    trapCellIx = CG.cells.num - nrOfTraps + i;
@@ -44,16 +58,11 @@ end
 
 dotProduct = sum(faceNormals .* faceFlowDirections, 2);
 
-
-
 % Do the average of fluxes
 a = horzcat(faceIndices, dotProduct);
 b = sortrows(a, 1);  % Sort rows based on face indices
 averageOfFluxes = accumarray(b(:,1), b(:,2)) ./ accumarray(b(:,1), 1);
 
-
 flux = averageOfFluxes;
-
-
 
 end
