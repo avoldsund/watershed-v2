@@ -25,10 +25,14 @@ CG.cells.z = util.setHeightsCoarseGrid(CG, heights, trapHeights, nrOfTraps);
 
 figure();
 newplot
-plotGrid(CG,'FaceColor',[0.95 0.95 0.95]); axis off;
-plotCellData(CG,(1:CG.cells.num)','EdgeColor','w','EdgeAlpha',.2);
-plotFaces(CG,(1:CG.faces.num)', 'FaceColor','none','LineWidth',2);
-colormap(.5*(colorcube(20) + ones(20,3))); axis off
+colorIndices = zeros(CG.cells.num, 1);
+colorIndices(CG.cells.num - nrOfTraps + 1:end) = 1;
+
+plotCellData(CG, CG.cells.z)
+%plotGrid(CG,'FaceColor',[0.95 0.95 0.95]); axis off;
+%plotCellData(CG,colorIndices,'EdgeColor','w','EdgeAlpha',.2);
+%plotFaces(CG,(1:CG.faces.num)', 'FaceColor','none','LineWidth',2);
+%colormap(.5*(colorcube(20) + ones(20,3))); axis off
 
 %% Show cell/block indices
 % In its basic form, the structure only represents topological information
@@ -59,15 +63,24 @@ flux = util.setFlux(CG, nrOfTraps);
 state = struct('flux', flux);
 rock = struct('poro', ones(CG.cells.num, 1));
 
-% srcIx = map(util.mapCoordsToIndices(source, nCols, nRows));
-src = addSource([], 1870, -10);
+% Find distance to CG.parent.cells.coords:
+outlet = double(outlet);
+%newOutlet = [10 * outlet(2), 60 - 10 * outlet(1)];
+%distance = util.calculateEuclideanDist(CG.parent.cells.centroids, newOutlet);
+%[M, I] = min(distance);
+%src = CG.partition(I);
+%src = src + 1;
+src = addSource([], 10, -10);
 
 % Perform time of flight computation
-max_time = 30000;
+max_time = 500;
 figure()
+
+n = CG.cells.num - nrOfTraps + 1;
+CG.cells.volumes(n:end) = CG.cells.volumes(n:end) * 0.01;
 tof = computeTimeOfFlight(state, CG, rock, 'src', src, ...
    'maxTOF', max_time, 'reverse', true);
 
-clf,plotCellData(CG,tof);
 
+clf,plotCellData(CG,tof);
 

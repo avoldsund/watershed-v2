@@ -36,17 +36,21 @@ for i = 1:nrOfTraps
 end
 
 % Correct face flow directions for cells with only two faces
-
 for i = 1:size(facesPerCell, 1) - nrOfTraps
-    if facesPerCell(i) == 2
+    if facesPerCell(i) == 2 || facesPerCell(i) == 1
         interval = CG.cells.facePos(i):CG.cells.facePos(i+1)-1;
         faceIx = CG.cells.faces(interval);
         nbrs = CG.faces.neighbors(faceIx, :);
         chosenIx = nbrs(find(nbrs ~= i)) > N;
         chosenFace = faceIx(chosenIx);
-
-        faceFlowDirections(interval(chosenIx), :) = CG.faces.normals(chosenFace, :);
+        if facesPerCell(i) == 1
+            faceFlowDirections(interval(chosenIx), :) = CG.cells.fd(i, :);
+            faceNormals(interval(chosenIx), :) = CG.cells.fd(i, :);
+        else
+            faceFlowDirections(interval(chosenIx), :) = CG.faces.normals(chosenFace, :);
+        end
     end
+    
 end
 
 % Change faceFlowDirection for spill pair face to ensure flow out of trap
@@ -56,13 +60,27 @@ for i = 1:nrOfTraps
    faceFlowDirections(indices, :) = repelem(CG.cells.fd(trapCellIx, :), size(spFaces, 2), 1);
 end
 
+
+
 dotProduct = sum(faceNormals .* faceFlowDirections, 2);
 
-% Do the average of fluxes
-a = horzcat(faceIndices, dotProduct);
-b = sortrows(a, 1);  % Sort rows based on face indices
-averageOfFluxes = accumarray(b(:,1), b(:,2)) ./ accumarray(b(:,1), 1);
+dotProduct = util.scaleDotProduct(CG, dotProduct);
 
-flux = averageOfFluxes;
+% Do the average of fluxes
+average = false;
+flux = util.decideFluxes(CG, faceIndices, dotProduct, average);
+
+% Check if there are cells with no outflow
+
+% count = 0;
+% for i = 1:CG.cells.num
+%    cellFaces = util.getCellFaces(CG, i);
+%    flx = flux(faces);
+%    nrm = CG.faces.normals(cellFaces, :);
+%    if sum(bsxfun(@times, nrm, flx)) > 0
+%        count = count + 1;
+%    end
+% end
+% count
 
 end
