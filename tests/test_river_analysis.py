@@ -851,3 +851,27 @@ def test_calculate_watershed_of_node_no_landscape_input():
         np.array_equal(heights, result_heights)
 
     assert all_is_equal
+
+
+def test_add_trap_flow_directions():
+
+    flow_directions = np.array([[None, None, None, None, None, None],
+                                [None, -1, -1, 2, -1, None],
+                                [None, 16, 2, 2, -1, None],
+                                [None, 8, 8, 8, 8, None],
+                                [None, -1, -1, -1, 32, None],
+                                [None, None, None, None, None, None]])
+
+    steepest_spill_pairs = [(13, 18), (16, 22), (26, 31)]
+
+    expected_flow_directions = np.array([[None, None, None, None, None, None],
+                                         [None, -1, -1, 2, -1, None],
+                                         [None, 16, 2, 2, 8, None],
+                                         [None, 8, 8, 8, 8, None],
+                                         [None, -1, 16, -1, 32, None],
+                                         [None, None, None, None, None, None]])
+
+    actual_flow_directions = river_analysis.add_trap_flow_directions(flow_directions, steepest_spill_pairs)
+
+    assert np.array_equal(expected_flow_directions, actual_flow_directions)
+
