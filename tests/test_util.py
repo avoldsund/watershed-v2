@@ -1486,3 +1486,75 @@ def test_make_depressionless_three_depressions_d4():
     new_heights = util.make_depressionless(heights, step_size, d4=True)
 
     assert np.array_equal(new_heights, result_heights)
+
+
+def test_map_two_indices_to_flow_direction_one():
+
+    cols = 4
+    ix_one = 5
+    ix_two = 10
+    expected_sol = 4
+
+    actual_sol = util.map_two_indices_to_flow_direction(ix_one, ix_two, cols)
+
+    assert actual_sol == expected_sol
+
+
+def test_map_two_indices_to_flow_direction_two():
+
+    cols = 4
+    ix_one = 6
+    ix_two = 10
+    expected_sol = 8
+
+    actual_sol = util.map_two_indices_to_flow_direction(ix_one, ix_two, cols)
+
+    assert actual_sol == expected_sol
+
+
+def test_map_two_indices_to_flow_direction_three():
+
+    cols = 4
+    ix_one = 10
+    ix_two = 9
+    expected_sol = 32
+
+    actual_sol = util.map_two_indices_to_flow_direction(ix_one, ix_two, cols)
+
+    assert actual_sol == expected_sol
+
+
+def test_map_two_indices_to_flow_direction_advanced_one():
+
+    cols = 6
+    ix_one = 16
+    ix_two = 22
+    expected_sol = 8
+
+    actual_sol = util.map_two_indices_to_flow_direction(ix_one, ix_two, cols)
+
+    assert actual_sol == expected_sol
+
+
+def test_map_two_indices_to_flow_direction_advanced_two():
+
+    cols = 6
+    ix_one = 16
+    ix_two = 21
+    expected_sol = 16
+
+    actual_sol = util.map_two_indices_to_flow_direction(ix_one, ix_two, cols)
+
+    assert actual_sol == expected_sol
+
+
+def test_map_two_indices_to_flow_direction_advanced_three():
+
+    cols = 6
+    ix_one = 14
+    ix_two = 7
+    expected_sol = 64
+
+    actual_sol = util.map_two_indices_to_flow_direction(ix_one, ix_two, cols)
+
+    assert actual_sol == expected_sol
