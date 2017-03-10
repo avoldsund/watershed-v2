@@ -459,6 +459,7 @@ def get_watershed_of_node(node_coords_r_c, expanded_conn_mat, traps, r, c):
             if len(prev_nodes) == 0:
                 return traps[node_in_trap_ix], np.array([node_in_trap_ix])
 
+    # Check if node is in a trap
     if map_nodes_to_trap[node_1d] != -1:
         trap_node = map_nodes_to_trap[node_1d] + total_nodes
     else:
@@ -539,6 +540,27 @@ def calculate_accumulated_flow(landscape, d4):
     return upslope_cells
 
 
+def calculate_accumulated_flow_no_landscape(heights, step_size, d4):
+
+    ny, nx = np.shape(heights)
+    heights = util.fill_single_cell_depressions(heights, ny, nx)
+    watersheds, steepest, flow_dir = util.calculate_watersheds(heights, nx, ny, step_size, d4)
+    spill_heights = util.get_spill_heights(watersheds, heights, steepest)
+    traps, size_of_traps = util.get_all_traps(watersheds, heights, spill_heights)
+
+    # Increase heights of traps and recalculate flow. Remove flow from some indices in traps.
+    util.make_landscape_depressionless_no_landscape_input(watersheds, steepest, heights, ny)
+    flow = util.get_flow_direction_indices(heights, step_size, ny, nx, d4)
+    for i in range(len(traps)):
+        trap_in_2d = util.map_1d_to_2d(traps[i], nx)
+        flow[trap_in_2d] = -1
+
+    node_conn_mat = util.make_sparse_node_conn_matrix(flow, ny, nx)
+    upslope_cells = calculate_nr_of_upslope_cells(node_conn_mat, ny, nx, traps, steepest, d4)
+
+    return upslope_cells
+
+
 def calculate_watershed_of_node_no_landscape_input(heights, nx, ny, step_size, outlet_coords_r_c, d4):
     # Does not require landscape as input
 
@@ -565,3 +587,17 @@ def calculate_watershed_of_node_no_landscape_input(heights, nx, ny, step_size, o
     ws_of_node, trap_nodes_in_ws = get_watershed_of_node(outlet_coords_r_c, expanded_conn_mat, traps, ny, nx)
 
     return ws_of_node, traps, spill_heights, trap_nodes_in_ws, steepest, flow_dir, heights
+
+
+def add_trap_flow_directions(flow_directions, steepest_spill_pairs):
+
+    r, c = np.shape(flow_directions)
+
+    for s in steepest_spill_pairs:
+        from_ix = s[0]
+        to_ix = s[1]
+        direction = util.map_two_indices_to_flow_direction(from_ix, to_ix, c)[0]
+
+        flow_directions[util.map_1d_to_2d(from_ix, c)] = direction
+
+    return flow_directions
