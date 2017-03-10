@@ -1153,3 +1153,19 @@ def make_depressionless(heights, step_size, d4):
         heights[map_1d_to_2d(np.asarray(traps[i]), nx)] = spill_heights[i]
 
     return heights
+
+
+def map_two_indices_to_flow_direction(ix_one, ix_two, cols):
+    """
+    Map two 1d-indices ix_one -> ix_two to the flow direction
+    :param ix_one: From index
+    :param ix_two: To index
+    :param cols: Nr of columns in grid
+    :return direction: One of the flow directions
+    """
+
+    flow_directions = np.array([1, 2, 4, 8, 16, 32, 64, 128])
+    nbr_indices = get_neighbor_indices(np.array([ix_one]), cols, d4=False)
+    direction = flow_directions[np.where(nbr_indices == ix_two)[1]]
+
+    return direction
