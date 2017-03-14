@@ -14,36 +14,34 @@ load('steepest.mat')
 totalCells = nRows * nCols;
 %%
 % Pre-process input data
-heights = rot90(heights, -1);  % Fix 1d-indexing
-fd = rot90(flowDirections, -1);  % Fix 1d-indexing
-ws = util.mapCoordsToIndices(watershed', nCols, nRows);
-spillPairsIndices = util.mapListOfCoordsToIndices(spillPairs, nCols, nRows);
+[heights, fd, ws, spillPairsIndices] = util.preProcessData(heights, flowDirections, watershed, spillPairs);
 
 % Create coarse grid and set heights
 CG = util.createCoarseGrid(ws, heights, traps, nrOfTraps, spillPairs);
 CG.cells.z = util.setHeightsCoarseGrid(CG, heights, trapHeights, nrOfTraps);
 
-figure();
-newplot
-colorIndices = zeros(CG.cells.num, 1);
-colorIndices(CG.cells.num - nrOfTraps + 1:end) = 1;
-
-plotCellData(CG, CG.cells.z)
-%plotGrid(CG,'FaceColor',[0.95 0.95 0.95]); axis off;
+% Plot landscape with traps
+%figure();
+%newplot
+%colorIndices = zeros(CG.cells.num, 1);
+%colorIndices(CG.cells.num - nrOfTraps + 1:end) = 1;
 %plotCellData(CG,colorIndices,'EdgeColor','w','EdgeAlpha',.2);
+
+%plotCellData(CG, CG.cells.z)
+%plotGrid(CG,'FaceColor',[0.95 0.95 0.95]); axis off;39
+
 %plotFaces(CG,(1:CG.faces.num)', 'FaceColor','none','LineWidth',2);
 %colormap(.5*(colorcube(20) + ones(20,3))); axis off
 
 %% Show cell/block indices
 % In its basic form, the structure only represents topological information
 % that specifies the relationship between blocks and block interfaces, etc.
-% The structure also contains information of the underlying fine grid. Let
+% The structure also contains information of the underlying fine gr id. Let
 % us start by plotting cell/block indices
 tg = text(CG.parent.cells.centroids(:,1), CG.parent.cells.centroids(:,2), ...
    num2str((1:CG.parent.cells.num)'),'FontSize',8, 'HorizontalAlignment','center');
 tcg = text(CG.cells.centroids(:,1), CG.cells.centroids(:,2), ...
    num2str((1:CG.cells.num)'),'FontSize',16, 'HorizontalAlignment','center');
-axis off;
 set(tcg,'BackgroundColor','w','EdgeColor','none');
 colormap(.5*jet+.5*ones(size(jet)));
 
@@ -55,32 +53,79 @@ tcg = text(CG.faces.centroids(:,1), CG.faces.centroids(:,2), ...
    num2str((1:CG.faces.num)'),'FontSize',12, 'HorizontalAlignment','center');
 set(tcg,'BackgroundColor','w','EdgeColor','none');
 
-%% Add flux field, state, rock and source
-CG.cells.fd = util.getFlowDirections(CG, fd, nrOfTraps, spillPairsIndices);
+%% Perform time-of-flight
 
+% Add flux field, state, rock and source
+CG.cells.fd = util.getFlowDirections(CG, fd, nrOfTraps, spillPairsIndices);
 flux = util.setFlux(CG, nrOfTraps);
 
+% Add flux and porosity. Make porosity smaller for lakes, so that they're
+% already full
 state = struct('flux', flux);
 rock = struct('poro', ones(CG.cells.num, 1));
+n = CG.cells.num - nrOfTraps + 1;
+oneVec = ones(nrOfTraps, 1);
+rock.poro(n:end) = oneVec * 0.01;
 
-% Find distance to CG.parent.cells.coords:
+% Find source:
 outlet = double(outlet);
-%newOutlet = [10 * outlet(2), 60 - 10 * outlet(1)];
-%distance = util.calculateEuclideanDist(CG.parent.cells.centroids, newOutlet);
-%[M, I] = min(distance);
-%src = CG.partition(I);
-%src = src + 1;
-src = addSource([], 10, -10);
+newOutlet = [10 * outlet(2), 10 * nCols - 10 * outlet(1)];
+distance = util.calculateEuclideanDist(CG.parent.cells.centroids, newOutlet);
+[M, I] = min(distance);
+src = CG.partition(I);
+src = src + 1;
+
+src = addSource([], src, -10);
 
 % Perform time of flight computation
-max_time = 500;
-figure()
-
-n = CG.cells.num - nrOfTraps + 1;
-CG.cells.volumes(n:end) = CG.cells.volumes(n:end) * 0.01;
+max_time = 500000;
 tof = computeTimeOfFlight(state, CG, rock, 'src', src, ...
    'maxTOF', max_time, 'reverse', true);
 
-
+% Plot results
+figure()
+timeScale = 60;
+tof = ceil(tof ./ timeScale);
 clf,plotCellData(CG,tof);
+colormap(jet)
+caxis([0, 120000/timeScale])
 
+%% Make uniform hydrograph
+
+timeScale = 60;
+amount = 1;
+duration = 5;
+tof = floor(tof ./ timeScale);
+
+hydrograph = util.hydrographUniform(CG, tof, amount, duration);
+plot(hydrograph)
+
+if timeScale == 60
+    xlabel('Time (minutes)')
+else
+    xlabel('Time (hours)')
+end
+ylabel('Flow m^3/s')
+
+
+%% Make disc hydrograph
+%timeScale = 60;
+%tof = ceil(tof ./ timeScale);
+
+% Direction and speed of disc precipitation
+d = [1, 1];
+v = 100;
+
+% Disc properties
+c0 = [10, 10];
+t = 0 : 0.01 : 2*pi;
+r = 500;
+amount = 1;
+disc = struct('radius', r, 'center', c0, 'amount', amount,...
+    'direction', d, 'speed', v);
+
+hydrograph = util.hydrographMovingDisc(CG, tof, ...
+    disc);
+
+
+%% 
