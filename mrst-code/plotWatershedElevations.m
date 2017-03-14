@@ -3,7 +3,7 @@ figure()
 load('watershed.mat');
 load('heights.mat');
 [nRows, nCols] = size(heights);
-heights = heights';
+
 heights = rot90(heights, -1);
 ws = util.mapCoordsToIndices(watershed', nCols, nRows);
 cellsInWatershed = size(watershed, 2);
@@ -20,10 +20,10 @@ G.cells.z = heights(1:nRows * nCols);
 rmCells = setdiff(1 : nCols * nRows, ws);
 G = removeCells(G, rmCells);
 
-Z = reshape(G.cells.z, [nRows, nCols]);
-clf, mesh(Z)
-xlabel('x');
-ylabel('y');
+%Z = reshape(G.cells.z, [nRows, nCols]);
+%clf, mesh(Z)
+%xlabel('x');
+%ylabel('y');
 
 % newplot
 % plotGrid(G,'FaceColor',[0.95 0.95 0.95]); axis off;
