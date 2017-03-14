@@ -1,24 +1,9 @@
-function flow = calculateHydrographUniform(CG, tof, scale, amount)
+function flow = hydrographUniform(CG, tof, amount, duration)
 %CALCULATEHYDROGRAPH Summary of this function goes here
 %   Detailed explanation goes here
 
-% Get tof in minutes or hours and round up
-tof = floor(tof ./ scale);
-
-% Get a duration array and a rain amount array
-
-% Amount is given in mm/hour
-%if scale == 60
-%    amount = amount/60;
-%end
-
-duration = 5;
 [duration, amount] = uniformPrecipitation(CG, duration, amount);
-
-% Multiply amount by volume (area)
 amount = amount .* CG.cells.volumes;
-
-% Duration is in the same time scale as tof
 
 % Iterate over time
 totalTime = 2500;
