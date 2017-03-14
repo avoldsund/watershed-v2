@@ -84,20 +84,21 @@ def plot_watersheds_2d(watersheds, outlet, landscape, ds):
     else:
         color_small = iter(color_hex * (len(watersheds)/3))
     fig = plt.figure()
-    ax = fig.add_subplot(111, aspect=1)
+    ax = fig.gca()  # fig.add_subplot(111, aspect=1)
 
     # Plot the watersheds
     for i in range(nr_of_watersheds):
+        print i
         row_col = util.map_1d_to_2d(watersheds[i], landscape.nx)
         plt.scatter(landscape.x_min + row_col[1][0::ds],
                     landscape.y_max - row_col[0][0::ds],
-                    color=next(color_small), s=25, lw=0, alpha=1)
+                    color=next(color_small), s=5, lw=0, alpha=1)
 
     # Outlet is of the form (row, col) <-> (y, x)
     plt.scatter(landscape.x_min + outlet[1], landscape.y_max - outlet[0],
-                color='b', s=25, lw=0, alpha=1)
+                color='b', s=10, lw=0, alpha=1)
 
-    # # Plot the boundary nodes
+    # Plot the boundary nodes
     # for i in range(nr_of_watersheds):
     #     b_p = boundary_pairs[i]
     #     u = np.unique(np.concatenate((b_p[0], b_p[1])))
@@ -106,6 +107,7 @@ def plot_watersheds_2d(watersheds, outlet, landscape, ds):
     #                 landscape.y_max - row_col[0][0::ds] * landscape.step_size,
     #                 color='black', s=2, lw=0, alpha=1)
 
+    fig.tight_layout()
     ax.axis('off')
 
     plt.show()
@@ -598,7 +600,7 @@ def plot_accumulated_flow(acc_flow):
     #rows, cols = np.shape(acc_flow)
     # threshold = rows * cols * 0.01
     #river_nodes = np.where(acc_flow > threshold)
-    threshold = 10000
+    threshold = 100000
     river_nodes = np.where(acc_flow > threshold)
     acc_flow[river_nodes] = threshold
     plt.imshow(acc_flow, cmap='RdBu_r')
@@ -607,3 +609,88 @@ def plot_accumulated_flow(acc_flow):
     # plt.scatter(river_nodes[1] * 10, river_nodes[0] * 10, color='black', s=2, lw=0, alpha=1)
     # plt.gca().invert_yaxis()
     # plt.show()
+
+
+def plot_difference_d4_and_d8(watersheds, outlet, landscape, ds):
+    """
+    Plot all watersheds and their boundary nodes
+    :param watersheds: List of arrays where each array is a watershed
+    :param outlet: The outlet cell of the watershed
+    :param ds: Downsampling factor if only every ds node shall be plotted
+    :return: Plots the watersheds
+    """
+
+    nr_of_watersheds = len(watersheds)
+
+    color_hex = ['#e41a1c', '#377eb8', '#4daf4a', '#984ea3', '#ff7f00', '#ffff33', '#a65628', '#f781bf']
+    if len(watersheds) < 3:
+        color_small = iter(color_hex)
+    else:
+        color_small = iter(color_hex * (len(watersheds)/3))
+    fig = plt.figure()
+    ax = fig.gca()  # fig.add_subplot(111, aspect=1)
+
+    # Plot first watershed
+    row_col = util.map_1d_to_2d(watersheds[0], landscape.nx)
+    plt.scatter(landscape.x_min + row_col[1][0::ds],
+                landscape.y_max - row_col[0][0::ds],
+                color=next(color_small), s=10, lw=0, alpha=1)
+
+    # Plot second watershed
+    row_col = util.map_1d_to_2d(watersheds[1], landscape.nx)
+    plt.scatter(landscape.x_min + row_col[1][0::ds],
+                landscape.y_max - row_col[0][0::ds],
+                color=next(color_small), s=10, lw=0, alpha=1)
+
+    # Plot intersection of 1. and 2. watershed
+    common_elements = np.intersect1d(watersheds[0], watersheds[1])
+    row_col = util.map_1d_to_2d(common_elements, landscape.nx)
+    plt.scatter(landscape.x_min + row_col[1][0::ds],
+                landscape.y_max - row_col[0][0::ds],
+                color=next(color_small), s=10, lw=0, alpha=1)
+
+    # Outlet is of the form (row, col) <-> (y, x)
+    plt.scatter(landscape.x_min + outlet[1], landscape.y_max - outlet[0],
+                color='k', s=20, lw=0, alpha=1)
+
+    fig.tight_layout()
+    ax.axis('off')
+
+    plt.savefig("/home/anderovo/Dropbox/masters-thesis/thesis/differenceD8andD4.png", dpi=300, bbox_inches='tight',
+                pad_inches=0)
+
+    plt.show()
+
+
+def plot_watershed_of_node(ws, rows, cols):
+
+    ws_2d = util.map_1d_to_2d(ws, cols)
+    ws_mat = np.zeros((rows, cols))
+    ws_mat[ws_2d] = 1
+    discrete_matshow(ws_mat)
+    plt.axis('off')
+
+    plt.show()
+
+
+def plot_flow_acc_no_landscape(flow_acc):
+
+    discrete_matshow(flow_acc[1:-1, 1:-1])
+    plt.axis('off')
+    plt.show()
+
+
+def discrete_matshow(data):
+    # get discrete colormap
+    cmap = plt.get_cmap('Blues', np.max(data) - np.min(data) + 1)
+    # set limits .5 outside true range
+
+    mat = plt.matshow(data, cmap=cmap, vmin=np.min(data) - .5, vmax=np.max(data) + .5)
+
+    # tell the colorbar to tick at integers
+    ticks = np.arange(np.min(data), np.max(data) + 1)
+
+    # cax = plt.colorbar(mat, ticks=ticks)
+    # cax.ax.tick_params(labelsize=22)
+
+    # cax.set_ticklabels(['Not in watershed', 'In watershed'], update_ticks=True)
