@@ -1,60 +1,72 @@
 function flow = hydrographMovingDisc(CG, tof, disc)
-%CALCULATEHYDROGRAPH Summary of this function goes here
+%CALCULATEHYDROGRAPH Calculate the discharge at the outlet given a moving
+%disc of precipitation.
 %   Detailed explanation goes here
 
-% Iterate over time
-maxTime = 2000;
-
-cellCent = CG.parent.cells.centroids;
-t = 0 : 0.01 : 2*pi;
+maxTime = 2500;
 cellArea = 10;
+flow = NaN;
+c = disc.center;
 
-% First timestep
-time = 1;
-x = cos(t) * disc.radius + disc.center(1);
-y = sin(t) * disc.radius + disc.center(2);
-in = inpolygon(cellCent(:, 1), cellCent(:, 2), x, y);
-hold on
-plot(x, y, 'r', 'Linewidth', 5);
-%centroidsInside = cellCent(in, :);
-%plot(centroidsInside(:, 1), centroidsInside(:, 2), 'b*');
-
-% Cells contributes flow if tof is less than maxTime
-tofOfIn = tof(CG.partition(in));
-contrFlow = tofOfIn(tofOfIn < maxTime);
-n = size(contrFlow, 1);
-
-ii = ones(1, n);
-jj = contrFlow' + time;
-v = cellArea * ones(1, n);
-flow = sparse(ii, jj, v);
-
-c = NaN;
-for time = 2:40
+for time = 1:maxTime
     % Move precipitation disc and locate cells within
-    c(1) = disc.center(1) + disc.direction(1) * disc.speed * (time - 1);
-    c(2) = disc.center(2) + disc.direction(2) * disc.speed * (time - 1);
-    x = cos(t) * disc.radius + c(1);
-    y = sin(t) * disc.radius + c(2);
-    in = inpolygon(cellCent(:, 1), cellCent(:, 2), x, y);
+    [in, x, y, c] = getCellsInDisc(CG, disc, c, time);
+    if size(in, 1) == 0
+       break 
+    end
     
     hold on
     plot(x, y, 'r', 'Linewidth', 3);
+    %cellCent = CG.parent.cells.centroids;
     %centroidsInside = cellCent(in, :);
     %plot(centroidsInside(:, 1), centroidsInside(:, 2), 'b*');
     
-    % Get tof from cells in coarse grid
-    tofOfIn = tof(CG.partition(in)); 
-    contrFlow = tofOfIn(tofOfIn < maxTime);
-    
-    n = size(contrFlow, 1);
-
-    ii = [ii, ones(1, n)];
-    jj = [jj, contrFlow' + time];
-    v = [v, cellArea * ones(1, n)];
-    flow = sparse(ii, jj, v);
+    flow = updateFlow(CG, tof, flow, disc, in, c, maxTime, cellArea, time);
 end
 
-flow = flow * (10^-3)/3600;
+flow = flow * (10^-3)/60;
+end
 
+
+function [in, x, y, center] = getCellsInDisc(CG, disc, center, currentTime)
+    % Moves the disc and finds the cells located within the moved disc
+    
+    cellCent = CG.parent.cells.centroids;    
+    t = 0 : 0.01 : 2 * pi;
+    center(1) = disc.center(1) + disc.direction(1) * disc.speed * (currentTime - 1);
+    center(2) = disc.center(2) + disc.direction(2) * disc.speed * (currentTime - 1);
+    x = cos(t) * disc.radius + center(1);
+    y = sin(t) * disc.radius + center(2);
+    in = inpolygon(cellCent(:, 1), cellCent(:, 2), x, y);
+end
+
+function flow = updateFlow(CG, tof, flow, disc, in, c, maxTime, cellArea, currentTime)
+    % Update flow, of if flow does not exist yet, create the matrix
+    
+    tofOfIn = tof(CG.partition(in));
+    contrFlow = tofOfIn(tofOfIn + currentTime <= maxTime);
+    n = size(contrFlow, 1);
+    scale = ones(1, n);
+    
+    indices = find(in);
+    validIndices = indices(tofOfIn + currentTime <= maxTime);
+    cellCentroids = CG.parent.cells.centroids(validIndices, :);
+    
+    if disc.gaussian
+        g = @(r, A, R) A * exp(-((r.^2)/(2 * (R/3)^2)));
+        distanceFromCenter = util.calculateEuclideanDist(cellCentroids, c);
+        scale = g(distanceFromCenter, disc.amplitude, disc.radius)';
+    end
+    
+    if ~isnan(flow)
+        [ii, jj, v] = find(flow);
+        ii = [ii, ones(1, n)];
+        jj = [jj, contrFlow' + currentTime];
+        v = [v, scale .* cellArea];
+    else
+        ii = ones(1, n);
+        jj = contrFlow' + currentTime;
+        v = scale .* cellArea;
+    end
+    flow = sparse(ii, jj, v);
 end
