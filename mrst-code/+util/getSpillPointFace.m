@@ -1,6 +1,9 @@
 function [spFaces, indices] = getSpillPointFace(CG, nrOfTraps, trapNr)
-%GETSPILLPOINTFACES Summary of this function goes here
-%   Detailed explanation goes here
+%GETSPILLPOINTFACES Calculate closest faces to spill point in trap
+%   [SPFACES, INDICES] = GETSPILLPOINTFACE(CG, NROFTRAPS, TRAPNR) returns
+%   the faces closest to the spill point in trap TRAPNR. The unique face
+%   numbers SPFACES and their indices in CG.cells.faces INDICES are
+%   returned.
 
 spCoord = CG.parent.cells.centroids(CG.spillPoints(trapNr), :);
 
@@ -10,15 +13,15 @@ startIx = CG.cells.facePos(trapCellIx);
 endIx = CG.cells.facePos(trapCellIx + 1) - 1;
 trapFaces = CG.cells.faces(startIx:endIx);
 
-% Get trap and spill point centroids. Perturb sp centroid in flow
+% Get trap and spill point centroids. Perturb spill point centroid in flow
 % direction
 trapCentroids = CG.faces.centroids(trapFaces, :);
 flowDirFromSpillPoint = CG.cells.fd(trapCellIx, :);
 spCoord = bsxfun(@plus, spCoord, flowDirFromSpillPoint);
 
-% Calculate distance from trap faces to perturbed sp centroid
+% Calculate distance from trap faces to perturbed centroid. Find the
+% face closest to the spill point
 distance = util.calculateEuclideanDist(trapCentroids, spCoord);
-%dFromSp = abs(sum(bsxfun(@minus, trapCentroids, spCoord), 2));
 faceIx = find(distance == min(distance(:)));
 
 spFaces = trapFaces(faceIx);

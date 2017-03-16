@@ -1,6 +1,11 @@
 function CG = createCoarseGrid(watershed, heights, traps, nrOfTraps, spillPairs)
-%CREATECOARSEGRID Summary of this function goes here
-%   Detailed explanation goes here
+%CREATECOARSEGRID Creates a coarse grid based on watershed and traps. 
+%   CG = CREATECOARSEGRID(WATERSHED, HEIGHTS, TRAPS, NROFTRAPS, SPILLPAIRS)
+%   first creates a cartGrid the same size as the HEIGHTS-landscape. Each
+%   cell is stepSize x stepSize large. Some cells are removed, so only the
+%   WATERSHED cells remain. Afterwards TRAPS are combined in a process using
+%   the original grid G, TRAPS, NROFTRAPS and SPILLPAIRS. The coarsened
+%   grid CG is returned.
 
 [nRows, nCols] = size(heights);
 
