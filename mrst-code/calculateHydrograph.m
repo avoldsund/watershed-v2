@@ -41,17 +41,19 @@ src = src + 1;
 src = addSource([], src, -10);
 
 % Perform time of flight computation
-max_time = 500000;
+%max_time = 500;
+max_time = 150000;
 tof = computeTimeOfFlight(state, CG, rock, 'src', src, ...
    'maxTOF', max_time, 'reverse', true);
 
 % Plot results
 figure()
-timeScale = 60;
+timeScale = 3600;
 tof = ceil(tof ./ timeScale);
 clf,plotCellData(CG,tof, 'EdgeColor', 'none');
 colormap(jet)
 caxis([0, 120000/timeScale])
+%caxis([0, 120000]);
 
 %% Make disc hydrograph
 %timeScale = 60;
@@ -59,7 +61,7 @@ caxis([0, 120000/timeScale])
 
 % Direction and speed of disc precipitation
 d = [1, 1.3];
-v = 10;
+v = 80;
 
 % Disc properties
 c0 = [10, 10];
@@ -70,5 +72,58 @@ disc = struct('radius', r, 'center', c0,...
     'direction', d, 'speed', v, 'gaussian', gaussian, 'amplitude', A);
 
 hydrograph = util.hydrographMovingDisc(CG, tof, disc);
+figure();
+plot(hydrograph);
+
+
+%% Make moving front
+
+% Define movement
+d = [1, 0];
+frontSize = 500;
+
+minCoord = min(CG.faces.centroids);
+minX = minCoord(1);
+minY = minCoord(2);
+maxCoord = max(CG.faces.centroids);
+maxX = maxCoord(1);
+maxY = maxCoord(2);
+
+if d(1) ~= 0 % Move horizontally
+    w = frontSize;
+    l = maxY - minY;
+    originX = minX - w;
+    originY = minY;
+    cornersX = [originX, originX, originX + w, originX + w];
+    cornersY = [originY, originY + l, originY + l, originY];
+    center = [originX + w/2, originY + l/2];
+    if d(1) < 0 % Move west
+        cornersX = cornersX + (maxX - minX) + w;
+        center = [cornersX(1) + w/2, originY + l/2];
+    end
+    
+else
+    l = maxX - minX;
+    w = frontSize;
+    originX = minX;
+    originY = minY - w;
+    cornersX = [originX, originX, originX + l, originX + l];
+    cornersY = [originY, originY + w, originY + w, originY];
+    center = [originX + l/2, originY + w/2];
+    
+    if d(2) < 0 % Move south
+        cornersY = cornersY + (maxY - minY) + w;
+        center = [originX + l/2, cornersY(1) + w/2];
+    end
+end
+
+A = 5;
+v = 5*60;
+gaussian = true;
+front = struct('amplitude', A, 'velocity', v, 'direction', d, 'frontSize', frontSize, ...
+    'center', center, 'cornersX', cornersX, 'cornersY', cornersY, 'gaussian', gaussian);
+
+hydrograph = util.hydrographMovingFront(CG, tof, front);
+
 figure();
 plot(hydrograph);
