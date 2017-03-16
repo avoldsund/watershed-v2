@@ -13,4 +13,3 @@ sum = deltaX.^2 + deltaY.^2;
 distance = sqrt(sum);
 
 end
-

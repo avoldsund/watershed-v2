@@ -25,17 +25,20 @@ function [partition, spillPoints] = fixPartitioning(G, traps, nrOfTraps, spillPa
 %   cells = [8, 9, 10, 11, 14, 15, 16, 17, 21, 22, 23, 28, 29]
 %   Output: partition = [10, 10, 10, 1, 2, 3, 4, 5, 6, 7, 9, 8, 9]'
 
+% Map traps and spill pairs from coordinates to indices
 nCols = G.cartDims(1);
 nRows = G.cartDims(2);
 traps = util.mapListOfCoordsToIndices(traps, nCols, nRows);
 spillPairs = util.mapListOfCoordsToIndices(spillPairs, nCols, nRows);
 spillPoints = zeros(size(spillPairs, 1), 1);
 
+% Create mapping between [1, nrOfCoarseCells] and [1, nCols x nRows]
 totalCells = G.cartDims(1) * G.cartDims(2);
 map = zeros(totalCells, 1);
 map(G.cells.indexMap) = 1:G.cells.num;
 partition = 1:G.cells.num;
 
+% Combine each trap into one cell
 for i = 1:nrOfTraps
     tCells = traps{i};
     spillPoint = spillPairs(i);
@@ -44,6 +47,7 @@ for i = 1:nrOfTraps
     partition(trapIndices) = G.cells.num + i;
 end
 
+% Fix partitioning so there are less than or equal partitions than remaining cells
 partition = compressPartition(partition);
 
 end

@@ -1,6 +1,10 @@
 function [heights, fd, ws, spillPairsIndices] = preProcessData(heights, flowDirections, watershed, spillPairs)
-%PREPROCESSDATA Summary of this function goes here
-%   Detailed explanation goes here
+%PREPROCESSDATA preprocesses data by doing rotations (fix 1D-indices) 
+%and mapping
+%   [HEIGHTS, FD, WS, SPILLPAIRSINDICES] = PREPROCESSDATA(HEIGHTS, 
+%   FLOWDIRECTIONS, WATERSHED, SPILLPAIRS) preprocesses the input data and
+%   returns it. This includes rotations to fix 1D-indexing, as well as
+%   mapping from coordinates to indices.
 
 [nRows, nCols] = size(heights);
 heights = rot90(heights, -1);  % Fix 1d-indexing

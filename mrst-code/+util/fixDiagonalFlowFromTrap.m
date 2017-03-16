@@ -1,24 +1,29 @@
-function [faceFlowDirections] = fixDiagonalFlowFromTrap(CG, spFaces, trapCellIx, faceFlowDirections)
-%FIXDIAGONALFLOWFROMTRAP Summary of this function goes here
-%   Detailed explanation goes here
+function faceFlowDirections = fixDiagonalFlowFromTrap(CG, spFaces, trapCellIx, faceFlowDirections)
+%FIXDIAGONALFLOWFROMTRAP looks at spill points with diagonal flow to ensure
+%continuation of flow.
+%   FACEFLOWDIRECTIONS = FIXDIAGONALFLOWFROMTRAP(CG, SPFACES, TRAPCELLIX,
+%   FACEFLOWDIRECTIONS) might alter the flow directions of the spill points
+%   neighbor cells if the spill point's flow direction leads to the
+%   neighbor cell not having outflow. SPFACES is the unique indices of the
+%   faces closest to the spill point in trap TRAPCELLIX. FACEFLOWDIRECTIONS
+%   might get updated for the neighbors.
 
 faceOne = spFaces(1, 1);
 faceTwo = spFaces(1, 2);
 
-nbrsOne = CG.faces.neighbors(faceOne, :);
-nbrsTwo = CG.faces.neighbors(faceTwo, :);
-nbrIxOne = nbrsOne ~= trapCellIx;
-nbrIxTwo = nbrsTwo ~= trapCellIx;
-nbrOne = nbrsOne(nbrIxOne);
-nbrTwo = nbrsTwo(nbrIxTwo);
+% Get neighbors of the two faces
+nbrs = CG.faces.neighbors(spFaces, :);
+notTraps = nbrs ~= trapCellIx;
+faceNbrs = nbrs(notTraps);
+nbrOne = faceNbrs(1);
+nbrTwo = faceNbrs(2);
 
-count = 0;
-if nbrOne == 0 || nbrTwo == 0
-    trapCellIx
-    count = count + 1
+% If any of the neighbors are at the boundary, return
+if any(faceNbrs == 0)
     return
 end
 
+% Find outflow faces from the two neighbors
 [facesOne, nrmlsOne] = util.flipNormalsOutwards(CG, nbrOne);
 [facesTwo, nrmlsTwo] = util.flipNormalsOutwards(CG, nbrTwo);
 dpOne = sum(bsxfun(@times, nrmlsOne, CG.cells.fd(nbrOne, :)), 2);

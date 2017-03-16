@@ -1,6 +1,8 @@
 function [faces, faceNormals] = flipNormalsOutwards(CG, cellIx)
-%FLIPNORMALSOUTWARDS Summary of this function goes here
-%   Detailed explanation goes here
+%FLIPNORMALSOUTWARDS flips a cell's normals outwards
+%   [FACES, FACENORMALS] = FLIPNORMALSOUTWARDS(CG, CELLIX) flips the
+%   normals of cell CELLIX. CELLIX's face indices FACES are returned, as
+%   well as their FACENORMALS.
 
 startIx = CG.cells.facePos(cellIx);
 endIx = CG.cells.facePos(cellIx + 1) - 1;
