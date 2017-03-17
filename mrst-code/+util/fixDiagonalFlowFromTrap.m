@@ -8,15 +8,10 @@ function faceFlowDirections = fixDiagonalFlowFromTrap(CG, spFaces, trapCellIx, f
 %   faces closest to the spill point in trap TRAPCELLIX. FACEFLOWDIRECTIONS
 %   might get updated for the neighbors.
 
-faceOne = spFaces(1, 1);
-faceTwo = spFaces(1, 2);
-
 % Get neighbors of the two faces
 nbrs = CG.faces.neighbors(spFaces, :);
 notTraps = nbrs ~= trapCellIx;
 faceNbrs = nbrs(notTraps);
-nbrOne = faceNbrs(1);
-nbrTwo = faceNbrs(2);
 
 % If any of the neighbors are at the boundary, return
 if any(faceNbrs == 0)
@@ -24,42 +19,17 @@ if any(faceNbrs == 0)
 end
 
 for cIx = 1:2
-% Find outflow faces from the two neighbors
-[faces, nrmls] = util.flipNormalsOutwards(CG, faceNbrs(cIx));
-dp = sum(bsxfun(@times, nrmls, CG.cells.fd(faceNbrs(cIx), :)), 2);
-posIndices = find(dp > 0);
+    % Find outflow faces from the two neighbors
+    [faces, nrmls] = util.flipNormalsOutwards(CG, faceNbrs(cIx));
+    dp = sum(bsxfun(@times, nrmls, CG.cells.fd(faceNbrs(cIx), :)), 2);
+    posIndices = find(dp > 0);
 
-% If the only outflow face is similar to the incoming diagonal, change fd
-% of nbrCell
-if faces(posIndices) == spFaces(1, cIx)
-    newFlowDir =  CG.cells.fd(trapCellIx, :) + CG.cells.fd(faceNbrs(cIx), :);
-    faceIndices = CG.cells.facePos(faceNbrs(cIx)):CG.cells.facePos(faceNbrs(cIx) + 1) - 1;    
-    faceFlowDirections(faceIndices, :) = rldecode(newFlowDir, size(faceIndices, 2));
-end
-
-end
-% Find outflow faces from the two neighbors
-%[facesOne, nrmlsOne] = util.flipNormalsOutwards(CG, nbrOne);
-%[facesTwo, nrmlsTwo] = util.flipNormalsOutwards(CG, nbrTwo);
-%dpOne = sum(bsxfun(@times, nrmlsOne, CG.cells.fd(nbrOne, :)), 2);
-%dpTwo = sum(bsxfun(@times, nrmlsTwo, CG.cells.fd(nbrTwo, :)), 2);
-%posIndicesOne = find(dpOne > 0);
-%posIndicesTwo = find(dpTwo > 0);
-
-% If the only outflow face is similar to the incoming diagonal, change fd
-% of nbrCell
-%if facesOne(posIndicesOne) == faceOne
-%    newFlowDir =  CG.cells.fd(trapCellIx, :) + CG.cells.fd(nbrOne, :);
-%    faceIndices = CG.cells.facePos(nbrOne):CG.cells.facePos(nbrOne + 1) - 1;
-%    
-%    faceFlowDirections(faceIndices, :) = rldecode(newFlowDir, size(faceIndices, 2));
-%    
-%end
-%if facesTwo(posIndicesTwo) == faceTwo
-%    newFlowDir =  CG.cells.fd(trapCellIx, :) + CG.cells.fd(nbrTwo, :);
-%    faceIndices = CG.cells.facePos(nbrTwo):CG.cells.facePos(nbrTwo + 1) - 1;
-%    faceFlowDirections(faceIndices, :) = rldecode(newFlowDir, size(faceIndices, 2));
-%end
-
+    % If the only outflow face is similar to the incoming diagonal, change fd
+    % of nbrCell
+    if faces(posIndices) == spFaces(1, cIx)
+        newFlowDir =  CG.cells.fd(trapCellIx, :) + CG.cells.fd(faceNbrs(cIx), :);
+        faceIndices = CG.cells.facePos(faceNbrs(cIx)):CG.cells.facePos(faceNbrs(cIx) + 1) - 1;    
+        faceFlowDirections(faceIndices, :) = rldecode(newFlowDir, size(faceIndices, 2));
+    end
 end
 
