@@ -12,26 +12,18 @@ load('steepest.mat')
 
 [nRows, nCols] = size(heights);
 totalCells = nRows * nCols;
-%%
-% Pre-process input data
-[heights, fd, ws, spillPairsIndices] = util.preProcessData(heights, flowDirections, watershed, spillPairs);
 
-% Create coarse grid and set heights
+% Pre-process input data, create coarse grid and set heights
+[heights, fd, ws, spillPairsIndices] = util.preProcessData(heights, flowDirections, watershed, spillPairs);
 CG = util.createCoarseGrid(ws, heights, traps, nrOfTraps, spillPairs);
 CG.cells.z = util.setHeightsCoarseGrid(CG, heights, trapHeights, nrOfTraps);
 
 % Plot landscape with traps
-%figure();
-%newplot
-%colorIndices = zeros(CG.cells.num, 1);
-%colorIndices(CG.cells.num - nrOfTraps + 1:end) = 1;
-%plotCellData(CG,colorIndices,'EdgeColor','w','EdgeAlpha',.2);
-
-%plotCellData(CG, CG.cells.z)
-%plotGrid(CG,'FaceColor',[0.95 0.95 0.95]); axis off;39
-
-%plotFaces(CG,(1:CG.faces.num)', 'FaceColor','none','LineWidth',2);
-%colormap(.5*(colorcube(20) + ones(20,3))); axis off
+figure();
+newplot
+colorIndices = zeros(CG.cells.num, 1);
+colorIndices(CG.cells.num - nrOfTraps + 1:end) = 1:nrOfTraps;
+plotCellData(CG,colorIndices,'EdgeColor','w','EdgeAlpha',.2);
 
 %% Show cell/block indices
 % In its basic form, the structure only represents topological information
@@ -56,39 +48,24 @@ set(tcg,'BackgroundColor','w','EdgeColor','none');
 %% Perform time-of-flight
 
 % Add flux field, state, rock and source
+[src, trapNr] = util.getSource(CG, outlet, traps, nCols);
 CG.cells.fd = util.getFlowDirections(CG, fd, nrOfTraps, spillPairsIndices);
-flux = util.setFlux(CG, nrOfTraps);
-
-% Add flux and porosity. Make porosity smaller for lakes, so that they're
-% already full
+[flux, faceFlowDirections] = util.setFlux(CG, nrOfTraps, trapNr);
 state = struct('flux', flux);
-rock = struct('poro', ones(CG.cells.num, 1));
-n = CG.cells.num - nrOfTraps + 1;
-oneVec = ones(nrOfTraps, 1);
-rock.poro(n:end) = oneVec * 0.01;
+rock = util.setPorosity(CG, nrOfTraps, 0.005);
 
-% Find source:
-outlet = double(outlet);
-newOutlet = [10 * outlet(2), 10 * nCols - 10 * outlet(1)];
-distance = util.calculateEuclideanDist(CG.parent.cells.centroids, newOutlet);
-[M, I] = min(distance);
-src = CG.partition(I);
-src = src + 1;
-
-src = addSource([], src, -10);
-
-% Perform time of flight computation
-max_time = 500000;
+% Calculate time-of-flight
+max_time = 200000;
 tof = computeTimeOfFlight(state, CG, rock, 'src', src, ...
    'maxTOF', max_time, 'reverse', true);
 
 % Plot results
 figure()
-timeScale = 60;
-tof = ceil(tof ./ timeScale);
-clf,plotCellData(CG,tof);
+%timeScale = 60;
+%tof = ceil(tof ./ timeScale);
+clf,plotCellData(CG,tof, 'EdgeColor', 'none');
 colormap(jet)
-caxis([0, 120000/timeScale])
+%caxis([0, 120000/timeScale])
 
 %% Make uniform hydrograph
 
@@ -118,14 +95,12 @@ v = 100;
 
 % Disc properties
 c0 = [10, 10];
-t = 0 : 0.01 : 2*pi;
 r = 500;
 amount = 1;
 disc = struct('radius', r, 'center', c0, 'amount', amount,...
     'direction', d, 'speed', v);
 
-hydrograph = util.hydrographMovingDisc(CG, tof, ...
-    disc);
+hydrograph = util.hydrographMovingDisc(CG, tof, disc);
 
 
 %% 
