@@ -1,4 +1,4 @@
-function [faces, faceNormals] = flipNormalsOutwards(CG, cellIx)
+function [faces, faceNormals, sign] = flipNormalsOutwards(CG, cellIx)
 %FLIPNORMALSOUTWARDS flips a cell's normals outwards
 %   [FACES, FACENORMALS] = FLIPNORMALSOUTWARDS(CG, CELLIX) flips the
 %   normals of cell CELLIX. CELLIX's face indices FACES are returned, as
