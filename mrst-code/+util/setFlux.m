@@ -1,4 +1,4 @@
-function flux = setFlux(CG, nrOfTraps)
+function [flux, faceFlowDirections] = setFlux(CG, nrOfTraps, outletTrapNr)
 %SETFLUX Summary of this function goes here
 %   Detailed explanation goes here
 
@@ -8,7 +8,6 @@ N = CG.cells.num - nrOfTraps;
 % Dot product of face normals and flow direction vectors
 faceIndices = CG.cells.faces(:, 1);
 faceNormals = CG.faces.normals(faceIndices, :);
-
 
 facesPerCell = CG.cells.facePos(2:end) - CG.cells.facePos(1:end-1);
 faceFlowDirections = zeros(sum(facesPerCell), 2);
@@ -45,42 +44,51 @@ for i = 1:size(facesPerCell, 1) - nrOfTraps
         chosenFace = faceIx(chosenIx);
         if facesPerCell(i) == 1
             faceFlowDirections(interval(chosenIx), :) = CG.cells.fd(i, :);
-            faceNormals(interval(chosenIx), :) = CG.cells.fd(i, :);
+            % Remember to scale faceNormal by area
+            faceNormals(interval(chosenIx), :) = CG.cells.fd(i, :) * 10;
         else
             faceFlowDirections(interval(chosenIx), :) = CG.faces.normals(chosenFace, :);
         end
+    end
+end
+
+% Possibly change flow directions for cells where face normal is [0, 0]
+fIx = find(CG.faces.normals(:, 1) == 0 & CG.faces.normals(:, 2) == 0);
+faceCoords = CG.faces.centroids(fIx, :);
+for i = 1:size(fIx, 1)
+    cIx = find(CG.cells.centroids(:, 1) == faceCoords(i, 1) & ...
+               CG.cells.centroids(:, 2) == faceCoords(i, 2));
+    interval = CG.cells.facePos(cIx):CG.cells.facePos(cIx + 1) - 1;
+    [~, fNrmls, ~] = util.flipNormalsOutwards(CG, cIx);
+    d = sum(fNrmls .* faceFlowDirections(interval, :), 2);
+    ix = find(fNrmls(:, 1) == 0 & fNrmls(:, 2) == 0);
+    if any(d > 0) == 0
+        % Remember to scale faceNormal by area
+        faceNormals(interval(ix), :) = CG.cells.fd(cIx, :) * 10; 
     end
     
 end
 
 % Change faceFlowDirection for spill pair face to ensure flow out of trap
 for i = 1:nrOfTraps
-   trapCellIx = CG.cells.num - nrOfTraps + i;
-   [spFaces, indices] = util.getSpillPointFace(CG, nrOfTraps, i);
-   faceFlowDirections(indices, :) = repelem(CG.cells.fd(trapCellIx, :), size(spFaces, 2), 1);
+    if i == outletTrapNr
+       continue 
+    end
+    trapCellIx = CG.cells.num - nrOfTraps + i;
+
+    [spFaces, indices] = util.getSpillPointFace(CG, nrOfTraps, i);
+    if size(indices, 2) > 1
+        faceFlowDirections = util.fixDiagonalFlowFromTrap(CG, spFaces, trapCellIx, faceFlowDirections);
+        %faceNormals(indices, :) = bsxfun(@times, faceNormals(indices, :), [1.1, 1.1]);
+        faceFlowDirections(indices, :) = repelem(CG.cells.fd(trapCellIx, :), size(spFaces, 2), 1);
+    end    
 end
 
 
 
-dotProduct = sum(faceNormals .* faceFlowDirections, 2);
-
-dotProduct = util.scaleDotProduct(CG, dotProduct);
+flux = util.calculateFlux(CG, faceNormals, faceFlowDirections);
 
 % Do the average of fluxes
-average = false;
-flux = util.decideFluxes(CG, faceIndices, dotProduct, average);
-
-% Check if there are cells with no outflow
-
-% count = 0;
-% for i = 1:CG.cells.num
-%    cellFaces = util.getCellFaces(CG, i);
-%    flx = flux(faces);
-%    nrm = CG.faces.normals(cellFaces, :);
-%    if sum(bsxfun(@times, nrm, flx)) > 0
-%        count = count + 1;
-%    end
-% end
-% count
+flux = util.averageFluxes(faceIndices, flux);
 
 end
