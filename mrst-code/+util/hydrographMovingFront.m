@@ -24,6 +24,7 @@ for time = 1:maxTime
     flow = updateFlow(CG, tof, flow, front, in, maxTime, cellArea, time);
 end
 
+    xlabel('Time (hours)')
 flow = flow * (10^-3);%/3600;
 end
 
