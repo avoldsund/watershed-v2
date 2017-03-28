@@ -32,24 +32,26 @@ heights_trap = np.array([[20, 20, 20, 20, 20],
                          [20, 5, 0, 5, 20]])
 
 heights_three_traps_div = np.array([[10, 10, 10, 10, 10, 10],
-                                    [8, 9, 9, 9, 7, 10],
+                                    [10, 9, 9, 9, 7, 10],
                                     [10, 9, 10, 9, 7, 10],
-                                    [10, 10, 10, 10, 7, 10],
+                                    [8, 10, 10, 10, 7, 10],
                                     [10, 4, 4, 4, 4.5, 10],
                                     [10, 4, 10, 10, 10, 10]])
 
-outlet_coords = (4, 1)
+print heights_three_traps_div
+
+outlet = (4, 1)
 step_size = 10
 ny, nx = np.shape(heights_three_traps_div)
 
 ws_of_node, traps, trap_heights, trap_indices_in_ws, steepest_spill_pairs, flow_directions, heights = river_analysis.\
-    calculate_watershed_of_node_no_landscape_input(heights_three_traps_div, nx, ny, step_size, outlet_coords, d4=True)
-print ws_of_node
-print traps
-print trap_heights
-print trap_indices_in_ws
-print steepest_spill_pairs
-print flow_directions
+    calculate_watershed_of_node_no_landscape_input(heights_three_traps_div, nx, ny, step_size, outlet, d4=False)
+# print ws_of_node
+# print traps
+# print trap_heights
+# print trap_indices_in_ws
+# print steepest_spill_pairs
+# print flow_directions
 
 # Pre-processing
 # boundary = util.get_domain_boundary_indices(nx, ny)
@@ -73,9 +75,13 @@ trap_heights = [trap_heights[t] for t in trap_indices_in_ws]
 
 ws = util.map_1d_to_2d(ws_of_node, nx)
 
+# Add flow directions for traps
+flow_directions = river_analysis.add_trap_flow_directions(flow_directions, steepest_spill_pairs)
+
 zero_wrapping = np.zeros((ny, nx), dtype=int)
 zero_wrapping[1:-1, 1:-1] = flow_directions[1:-1, 1:-1]
 flow_directions = zero_wrapping
+steepest_spill_pairs = [util.map_1d_to_2d(steepest_spill_pairs[i][0], nx) for i in range(len(steepest_spill_pairs)) if i in trap_indices_in_ws]
 
 # Create cell array structure for traps
 new_traps = np.zeros((len(traps), 2), dtype=object)
@@ -83,9 +89,10 @@ for i in range(len(traps)):
     new_traps[i][0] = traps[i][0]
     new_traps[i][1] = traps[i][1]
 
-scipy.io.savemat('watershed.mat', dict(watershed=ws))
+scipy.io.savemat('watershed.mat', dict(watershed=ws, outlet=outlet))
 scipy.io.savemat('heights.mat', dict(heights=heights))
 scipy.io.savemat('traps.mat', dict(traps=new_traps, totalTrapCells=total_trap_cells,
                                    nrOfTraps=nr_of_traps, nrOfCellsInEachTrap=nr_of_cells_in_each_trap,
                                    trapHeights=trap_heights))
+scipy.io.savemat('steepest.mat', dict(spillPairs=steepest_spill_pairs))
 scipy.io.savemat('flowDirections.mat', dict(flowDirections=flow_directions))
