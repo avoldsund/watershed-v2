@@ -11,12 +11,12 @@ c = disc.center;
 for time = 1:maxTime
     % Move precipitation disc and locate cells within
     [in, x, y, c] = getCellsInDisc(CG, disc, c, time);
-    if size(in, 1) == 0
+    if all(in == 0) % No cells in disc
        break 
     end
     
-    hold on
-    plot(x, y, 'r', 'Linewidth', 3);
+    %hold on
+    %plot(x, y, 'r', 'Linewidth', 3);
     %cellCent = CG.parent.cells.centroids;
     %centroidsInside = cellCent(in, :);
     %plot(centroidsInside(:, 1), centroidsInside(:, 2), 'b*');
@@ -55,6 +55,7 @@ function flow = updateFlow(CG, tof, flow, disc, in, c, maxTime, cellArea, curren
     if disc.gaussian
         g = @(r, A, R) A * exp(-((r.^2)/(2 * (R/3)^2)));
         distanceFromCenter = util.calculateEuclideanDist(cellCentroids, c);
+        assert(any(distanceFromCenter > disc.radius) == 0);
         scale = g(distanceFromCenter, disc.amplitude, disc.radius)';
     end
     
