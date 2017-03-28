@@ -1,4 +1,4 @@
-function [src, trapNr] = getSource(CG, outletCoord, traps, nCols)
+function [src, trapNr] = getSource(CG, outletCoord, traps, nCols, srcStrength)
 %GETSOURCE Summary of this function goes here
 %   Detailed explanation goes here
 
@@ -12,7 +12,7 @@ for i = 1:nrOfTraps
     
     if any(trapCoords(:, 1) == outlet(1) & trapCoords(:, 2) == outlet(2)) == 1
         srcIx = CG.cells.num - nrOfTraps + i;
-        src = addSource([], srcIx, -10);
+        src = addSource([], srcIx, -srcStrength);
         trapNr = i;
         return;
     end
@@ -36,8 +36,8 @@ while noSrc
     end
 end
 
-src = src + 1; % ONLY FOR THE LARGE WATERSHED
-src = addSource([], src, -10);
+%src = src + 1; % ONLY FOR THE LARGE WATERSHED
+src = addSource([], src, -srcStrength);
 trapNr = NaN;
 
 end
