@@ -1,7 +1,4 @@
-%% Calculate time-of-flight using DEM
-
-% From pre-processing: if a trap is spilling over into a cell at equal
-% height, add that cell to the trap
+%% Calculate hydrograph for a precipitation scenario in a DEM landscape
 
 % Load necessary data and compute geometry
 load('watershed.mat');
@@ -13,55 +10,35 @@ load('steepest.mat')
 [nRows, nCols] = size(heights);
 totalCells = nRows * nCols;
 [heights, fd, ws, spillPairsIndices] = util.preProcessData(heights, flowDirections, watershed, spillPairs);
-
-% Create coarse grid and set heights
 CG = util.createCoarseGrid(ws, heights, traps, nrOfTraps, spillPairs);
 CG.cells.z = util.setHeightsCoarseGrid(CG, heights, trapHeights, nrOfTraps);
 
 % Add flux field, state, rock and source
+[src, trapNr] = util.getSource(CG, outlet, traps, nCols);
 CG.cells.fd = util.getFlowDirections(CG, fd, nrOfTraps, spillPairsIndices);
-flux = util.setFlux(CG, nrOfTraps);
-
-% Add flux and porosity. Make porosity smaller for lakes, so that they're
-% already full
+[flux, faceFlowDirections] = util.setFlux(CG, nrOfTraps, trapNr);
 state = struct('flux', flux);
-rock = struct('poro', ones(CG.cells.num, 1));
-n = CG.cells.num - nrOfTraps + 1;
-oneVec = ones(nrOfTraps, 1);
-rock.poro(n:end) = oneVec * 0.01;
+rock = util.setPorosity(CG, nrOfTraps, 0.005);
 
-% Find source:
-outlet = double(outlet);
-newOutlet = [10 * outlet(2), 10 * nCols - 10 * outlet(1)];
-distance = util.calculateEuclideanDist(CG.parent.cells.centroids, newOutlet);
-[M, I] = min(distance);
-src = CG.partition(I);
-src = src + 1;
-%src = 10;
-src = addSource([], src, -10);
-
-% Perform time of flight computation
-%max_time = 500;
-max_time = 150000;
+% Calculate time-of-flight
+maxTime = 500000;
 tof = computeTimeOfFlight(state, CG, rock, 'src', src, ...
-   'maxTOF', max_time, 'reverse', true);
+   'maxTOF', maxTime, 'reverse', true);
 
 % Plot results
 figure()
-timeScale = 3600;
+timeScale = 60;
 tof = ceil(tof ./ timeScale);
 clf,plotCellData(CG,tof, 'EdgeColor', 'none');
 colormap(jet)
-caxis([0, 120000/timeScale])
-%caxis([0, 120000]);
+caxis([0, max(tof)])
+
 
 %% Make disc hydrograph
-%timeScale = 60;
-%tof = ceil(tof ./ timeScale);
 
 % Direction and speed of disc precipitation
-d = [1, 1.3];
-v = 80;
+d = [1, 0];
+v = 5;
 
 % Disc properties
 c0 = [10, 10];
@@ -118,7 +95,7 @@ else
 end
 
 A = 5;
-v = 5*60;
+v = 5;
 gaussian = true;
 front = struct('amplitude', A, 'velocity', v, 'direction', d, 'frontSize', frontSize, ...
     'center', center, 'cornersX', cornersX, 'cornersY', cornersY, 'gaussian', gaussian);
