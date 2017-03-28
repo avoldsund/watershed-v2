@@ -30,6 +30,7 @@ function flowDirectionArray = getFlowDirections(CG, flowDirections, nrOfTraps, s
 %     128 ->  0  1
 %   
 %   Output: [-1, 0; 0, -1; 0, -1; 0, -1; 0, -1; 1, 0; 1, 0; 1, 0; 0, -1; -1, -1;]
+%   N.B: The diagonal flow is scaled by 1/sqrt(2) to get unit vectors.
 
 % Set flow directions
 cutoff = CG.cells.num - nrOfTraps;
@@ -45,7 +46,8 @@ for i = 1:nrOfTraps
 end
 
 % Map to flow direction vectors
-mapTo = [1, 1; 1, 0; 1, -1; 0, -1; -1, -1; -1, 0; -1, 1; 0, 1;];
+alpha = 1/sqrt(2);
+mapTo = [1*alpha, 1*alpha; 1, 0; 1*alpha, -1*alpha; 0, -1; -1*alpha, -1*alpha; -1, 0; -1*alpha, 1*alpha; 0, 1;];
 flowDirectionArray = mapTo(log2(flowDir) + 1, :);
  
 end
