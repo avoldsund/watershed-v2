@@ -1,63 +1,45 @@
 %% Calculate hydrograph for a precipitation scenario in a DEM landscape
 
-% Load necessary data and compute geometry
-load('watershed.mat');
-load('heights.mat');
-load('traps.mat');
-load('flowDirections.mat')
-load('steepest.mat')
+phi = 0.1;
+scaleFluxes = true;
+[CG, tof] = calculateTof(phi, scaleFluxes);
+tof = ceil(tof);
+showTofCentroids = false;
+ftof = plot.tof(CG, tof, showTofCentroids, false);
 
-[nRows, nCols] = size(heights);
-totalCells = nRows * nCols;
-[heights, fd, ws, spillPairsIndices] = util.preProcessData(heights, flowDirections, watershed, spillPairs);
-CG = util.createCoarseGrid(ws, heights, traps, nrOfTraps, spillPairs);
-CG.cells.z = util.setHeightsCoarseGrid(CG, heights, trapHeights, nrOfTraps);
+%% Uniform hydrograph
 
-% Add flux field, state, rock and source
-[src, trapNr] = util.getSource(CG, outlet, traps, nCols);
-CG.cells.fd = util.getFlowDirections(CG, fd, nrOfTraps, spillPairsIndices);
-[flux, faceFlowDirections] = util.setFlux(CG, nrOfTraps, trapNr);
-state = struct('flux', flux);
-rock = util.setPorosity(CG, nrOfTraps, 0.005);
 
-% Calculate time-of-flight
-maxTime = 500000;
-tof = computeTimeOfFlight(state, CG, rock, 'src', src, ...
-   'maxTOF', maxTime, 'reverse', true);
+amount = 10; % mm/hour
+duration = 600;
+discharge = util.hydrographUniform(CG, tof, amount, duration);
 
-% Plot results
-figure()
-timeScale = 60;
-tof = ceil(tof ./ timeScale);
-clf,plotCellData(CG,tof, 'EdgeColor', 'none');
-colormap(jet)
-caxis([0, max(tof)])
-
+saveName = strcat('uniformHydrographNoScaling', 'P', int2str(amount), 'D', int2str(duration));
+plot.hydrograph(discharge, saveName)
 
 %% Make disc hydrograph
-
+ 
 % Direction and speed of disc precipitation
 d = [1, 0];
-v = 5;
+v = 3;
 
 % Disc properties
 c0 = [10, 10];
-r = 500;
-A = 10;
+r = 10;
+intensity = 10;
 gaussian = true;
 disc = struct('radius', r, 'center', c0,...
-    'direction', d, 'speed', v, 'gaussian', gaussian, 'amplitude', A);
+    'direction', d, 'speed', v, 'gaussian', gaussian, 'amplitude', intensity);
 
 hydrograph = util.hydrographMovingDisc(CG, tof, disc);
-figure();
-plot(hydrograph);
 
 
 %% Make moving front
 
 % Define movement
-d = [1, 0];
-frontSize = 500;
+d = [0, 1];
+frontSize = 10;
+offset = frontSize / 2;
 
 minCoord = min(CG.faces.centroids);
 minX = minCoord(1);
@@ -71,12 +53,14 @@ if d(1) ~= 0 % Move horizontally
     l = maxY - minY;
     originX = minX - w;
     originY = minY;
-    cornersX = [originX, originX, originX + w, originX + w];
     cornersY = [originY, originY + l, originY + l, originY];
-    center = [originX + w/2, originY + l/2];
-    if d(1) < 0 % Move west
-        cornersX = cornersX + (maxX - minX) + w;
-        center = [cornersX(1) + w/2, originY + l/2];
+    if d(1) > 0 % Move east
+        cornersX = [originX, originX, originX + w, originX + w] + offset;
+        center = [originX + offset + w/2, originY + l/2];
+    else % Move west
+        offset = (maxX - minX) + w - offset;
+        cornersX = [originX, originX, originX + w, originX + w] + offset;
+        center = [originX + offset + w/2, originY + l/2];
     end
     
 else
@@ -85,22 +69,29 @@ else
     originX = minX;
     originY = minY - w;
     cornersX = [originX, originX, originX + l, originX + l];
-    cornersY = [originY, originY + w, originY + w, originY];
-    center = [originX + l/2, originY + w/2];
-    
-    if d(2) < 0 % Move south
-        cornersY = cornersY + (maxY - minY) + w;
-        center = [originX + l/2, cornersY(1) + w/2];
+    if d(2) > 0 % Move north
+        cornersY = [originY, originY + w, originY + w, originY] + offset;
+        center = [originX + l/2, originY + w/2 + offset];
+    else % Move south
+        offset = (maxY - minY) + w - offset;
+        cornersY = [originY, originY + w, originY + w, originY] + offset;
+        center = [originX + l/2, originY + w/2 + offset];
     end
 end
+corners = [cornersX; cornersY]';
 
-A = 5;
-v = 5;
-gaussian = true;
-front = struct('amplitude', A, 'velocity', v, 'direction', d, 'frontSize', frontSize, ...
-    'center', center, 'cornersX', cornersX, 'cornersY', cornersY, 'gaussian', gaussian);
+intensity = 10; % mm/hour
+v = 1; % m/s
+gaussian = false;
+maxTime = 650;
 
-hydrograph = util.hydrographMovingFront(CG, tof, front);
+front = struct('amplitude', intensity, 'velocity', v, 'direction', d, 'frontSize', frontSize, ...
+    'center', center, 'corners', corners, 'gaussian', gaussian);
 
-figure();
-plot(hydrograph);
+discharge = util.hydrographMovingFront(CG, tof, front, maxTime);
+
+saveName = strcat('frontHydrograph', 'I', num2str(intensity), 'v', num2str(v), 'D', strcat(int2str(d(1)), int2str(d(2))));
+
+h = plot.hydrograph(discharge, saveName);
+export_fig(saveName, h, '-eps')
+

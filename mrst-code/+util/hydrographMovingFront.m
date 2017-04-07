@@ -10,20 +10,20 @@ function discharge = hydrographMovingFront(CG, tof, front, maxTime)
 cellArea = 10;
 flow = false;
 in = true;
-time = 1;
+t = 1;
 
-while any(in) == 1 & time < maxTime
+while any(in) == 1 & t < maxTime
 
-    [flow, in] = getDischarge(CG, tof, flow, front, maxTime, cellArea, time);
+    [flow, in] = getDischarge(CG, tof, flow, front, maxTime, cellArea, t);
 
-    %hold on
-    %plot([front.corners(:, 1); front.corners(1, 1)], [front.corners(:, 2); front.corners(1, 2)], 'Linewidth', 3);
-    %cellCent = CG.parent.cells.centroids;
-    %centroidsInside = cellCent(in, :);
-    %plot(centroidsInside(:, 1), centroidsInside(:, 2), 'b*', 'MarkerSize', 16);
+    hold on
+    plot([front.corners(:, 1); front.corners(1, 1)], [front.corners(:, 2); front.corners(1, 2)], 'Linewidth', 3);
+    cellCent = CG.parent.cells.centroids;
+    centroidsInside = cellCent(in, :);
+    plot(centroidsInside(:, 1), centroidsInside(:, 2), 'b*', 'MarkerSize', 16);
     
     front = moveFront(front);
-    time = time + 1;
+    t = t + 1;
 end
 
 flow = flow * (10^-3) / 3600;
@@ -66,12 +66,10 @@ function [flow, in] = getDischarge(CG, tof, flow, front, maxTime, cellArea, curr
     
     % Different cells get different intensities
     if front.gaussian
+        distance = getDistanceFromCenter(cellCentroids, front);
         g = @(r, A, R) A * exp(-((r.^2)/(2 * (R/3)^2)));
-        ix = find(front.direction ~= 0);
-        distanceFromCenterLine = abs(cellCentroids(:, ix) - front.center(ix));
-        tol = 1e-10;
-        assert(any(distanceFromCenterLine - front.frontSize/2 > tol) == 0);
-        scale = g(distanceFromCenterLine, front.amplitude, front.frontSize/2)';
+        frontRadius = front.frontSize/2;
+        scale = g(distance, front.amplitude, frontRadius)';
     else
         scale = scale * front.amplitude;
     end
@@ -81,6 +79,20 @@ function [flow, in] = getDischarge(CG, tof, flow, front, maxTime, cellArea, curr
     ii = [ii, ones(1, n)];
     jj = [jj, tofInFront' + currentTime];
     v = [v, scale .* cellArea];
+    if min(v) < 10^-4
+        disp('hei')
+    end
+        
     flow = sparse(ii, jj, v);
 
+end
+
+function distance = getDistanceFromCenter(cellCentroids, front)
+    
+    % Distance is the distance from the center line for each cell centroid
+    ix = find(front.direction ~= 0);
+    distance = abs(cellCentroids(:, ix) - front.center(ix));
+    tol = 1e-10;
+    assert(any(distance - front.frontSize/2 > tol) == 0);
+    
 end

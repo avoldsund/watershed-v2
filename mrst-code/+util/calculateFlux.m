@@ -1,7 +1,14 @@
-function flux = calculateFlux(CG, faceNormals, faceFlowDirections)
+function flux = calculateFlux(CG, faceNormals, faceFlowDirections, scale)
 %CALCULATEFLUX Something
 %   
+
+    deltaX = 10;
     flux = sum(faceNormals .* faceFlowDirections, 2);
+    
+    if ~scale    
+        flux = flux ./ deltaX;
+        return
+    end
     
     N = size(CG.cells.faces, 1);
     deltaZ = zeros(N, 1);
@@ -39,7 +46,6 @@ function flux = calculateFlux(CG, faceNormals, faceFlowDirections)
         deltaZ(ixIn(posIn)) = deltaInFlow(posIn);
     end
     
-    deltaX = 10;
     alpha = deltaZ ./ deltaX;
     flux = flux .* alpha;
 end
