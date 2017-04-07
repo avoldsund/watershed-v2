@@ -1,4 +1,4 @@
-function [flux, faceFlowDirections] = setFlux(CG, nrOfTraps, outletTrapNr)
+function [flux, faceFlowDirections] = setFlux(CG, nrOfTraps, outletTrapNr, scale)
 %SETFLUX Summary of this function goes here
 %   Detailed explanation goes here
 
@@ -52,7 +52,7 @@ for i = 1:size(facesPerCell, 1) - nrOfTraps
     end
 end
 
-% Possibly change flow directions for cells where face normal is [0, 0]
+% Possibly change face normals for cells where face normal is [0, 0]
 fIx = find(CG.faces.normals(:, 1) == 0 & CG.faces.normals(:, 2) == 0);
 faceCoords = CG.faces.centroids(fIx, :);
 for i = 1:size(fIx, 1)
@@ -62,7 +62,7 @@ for i = 1:size(fIx, 1)
     [~, fNrmls, ~] = util.flipNormalsOutwards(CG, cIx);
     d = sum(fNrmls .* faceFlowDirections(interval, :), 2);
     ix = find(fNrmls(:, 1) == 0 & fNrmls(:, 2) == 0);
-    if any(d > 0) == 0
+    if any(d > 0) == -1
         % Remember to scale faceNormal by area
         faceNormals(interval(ix), :) = CG.cells.fd(cIx, :) * 10; 
     end
@@ -79,14 +79,13 @@ for i = 1:nrOfTraps
     [spFaces, indices] = util.getSpillPointFace(CG, nrOfTraps, i);
     if size(indices, 2) > 1
         faceFlowDirections = util.fixDiagonalFlowFromTrap(CG, spFaces, trapCellIx, faceFlowDirections);
-        %faceNormals(indices, :) = bsxfun(@times, faceNormals(indices, :), [1.1, 1.1]);
         faceFlowDirections(indices, :) = repelem(CG.cells.fd(trapCellIx, :), size(spFaces, 2), 1);
     end    
 end
 
 
 
-flux = util.calculateFlux(CG, faceNormals, faceFlowDirections);
+flux = util.calculateFlux(CG, faceNormals, faceFlowDirections, scale);
 
 % Do the average of fluxes
 flux = util.averageFluxes(faceIndices, flux);

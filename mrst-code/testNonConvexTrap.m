@@ -13,7 +13,6 @@ CG = generateCoarseGrid(G, partition);
 CG = coarsenGeometry(CG);
 nrOfTraps = 1;
 
-mapFacesToCells = util.mapFacesToCells(CG, 1);
 figure();
 newplot
 colorIndices = zeros(CG.cells.num, 1);
