@@ -1,76 +1,86 @@
-function flow = hydrographMovingFront(CG, tof, front)
+function discharge = hydrographMovingFront(CG, tof, front, maxTime)
 %CALCULATEHYDROGRAPH Calculate the discharge at the outlet given a moving
 %front of precipitation.
-%   Detailed explanation goes here
+%   FLOW = HYDROGRAPHMOVINGFRONT(CG, TOF, FRONT, MAXTIME) returns the FLOW from a
+%   watershed given a moving front with precipitation, FRONT. The
+%   time-of-flight is given by the TOF variable, with a grid structure CG.
+%   The last parameter MAXTIME describes the time interval [0, MAXTIME] of
+%   the resulting hydrograph.
 
-maxTime = 3500;
 cellArea = 10;
-flow = NaN;
+flow = false;
+in = true;
+time = 1;
 
-for time = 1:maxTime
-    % Move precipitation disc and locate cells within
-    [in, x, y, newCenter] = getCellsInMovingFront(CG, front, time);
-    front.center = newCenter;
-    if all(in == 0) && time > 1 % No cells in disc
-       break 
-    end
-    
+while any(in) == 1 & time < maxTime
+
+    [flow, in] = getDischarge(CG, tof, flow, front, maxTime, cellArea, time);
+
     %hold on
-    %plot([x, x(1)], [y, y(1)], 'r', 'Linewidth', 3);
+    %plot([front.corners(:, 1); front.corners(1, 1)], [front.corners(:, 2); front.corners(1, 2)], 'Linewidth', 3);
     %cellCent = CG.parent.cells.centroids;
     %centroidsInside = cellCent(in, :);
-    %plot(centroidsInside(:, 1), centroidsInside(:, 2), 'b*');
+    %plot(centroidsInside(:, 1), centroidsInside(:, 2), 'b*', 'MarkerSize', 16);
     
-    flow = updateFlow(CG, tof, flow, front, in, maxTime, cellArea, time);
+    front = moveFront(front);
+    time = time + 1;
 end
 
-    xlabel('Time (hours)')
-flow = flow * (10^-3);%/3600;
+flow = flow * (10^-3) / 3600;
+
+% Remove flow less than machine epsilon
+discharge = zeros(maxTime, 1);
+[~, jj, v] = find(flow);
+validIx = v > eps;
+discharge(jj(validIx)) = v(validIx);
+
 end
 
 
-function [in, cornersX, cornersY, newCenter] = getCellsInMovingFront(CG, front, currentTime)
-    cellCent = CG.parent.cells.centroids;    
-    cornersX = front.cornersX + front.direction(1) * front.velocity * (currentTime - 1);
-    cornersY = front.cornersY + front.direction(2) * front.velocity * (currentTime - 1);
+function front = moveFront(front)
     
-    if currentTime > 1
-        newCenter = front.center + front.direction * front.velocity;
-    else
-        newCenter = front.center;
-    end
-    in = inpolygon(cellCent(:, 1), cellCent(:, 2), cornersX, cornersY);
+    front.corners = bsxfun(@plus, front.corners, front.direction .* front.velocity);
+    front.center = bsxfun(@plus, front.center, front.direction * front.velocity);
+
 end
 
-function flow = updateFlow(CG, tof, flow, front, in, maxTime, cellArea, currentTime)
-    % Update flow, of if flow does not exist yet, create the matrix
+function [flow, in] = getDischarge(CG, tof, flow, front, maxTime, cellArea, currentTime)
     
-    tofOfIn = tof(CG.partition(in));
-    contrFlow = tofOfIn(tofOfIn + currentTime <= maxTime);
-    n = size(contrFlow, 1);
+    % Cells in storm front
+    cellCent = CG.parent.cells.centroids;
+    in = inpolygon(cellCent(:, 1), cellCent(:, 2), front.corners(:, 1), front.corners(:, 2));
+    frontIndices = find(in);
+    
+    % Map the time-of-flight from coarse grid to fine grid
+    tofInFront = tof(CG.partition(in));
+    
+    % Of these, only include cells where their precipitation reaches the outlet
+    % before maxTime
+    validFrontIndices = tofInFront + currentTime <= maxTime;
+    frontIndices = frontIndices(validFrontIndices);
+    tofInFront = tofInFront(validFrontIndices);
+    
+    n = size(tofInFront, 1);
     scale = ones(1, n);
+    cellCentroids = cellCent(frontIndices, :);
     
-    indices = find(in);
-    validIndices = indices(tofOfIn + currentTime <= maxTime);
-    cellCentroids = CG.parent.cells.centroids(validIndices, :);
-    
+    % Different cells get different intensities
     if front.gaussian
         g = @(r, A, R) A * exp(-((r.^2)/(2 * (R/3)^2)));
         ix = find(front.direction ~= 0);
         distanceFromCenterLine = abs(cellCentroids(:, ix) - front.center(ix));
-        assert(any(distanceFromCenterLine > front.frontSize/2) == 0);
+        tol = 1e-10;
+        assert(any(distanceFromCenterLine - front.frontSize/2 > tol) == 0);
         scale = g(distanceFromCenterLine, front.amplitude, front.frontSize/2)';
+    else
+        scale = scale * front.amplitude;
     end
     
-    if ~isnan(flow)
-        [ii, jj, v] = find(flow);
-        ii = [ii, ones(1, n)];
-        jj = [jj, contrFlow' + currentTime];
-        v = [v, scale .* cellArea];
-    else
-        ii = ones(1, n);
-        jj = contrFlow' + currentTime;
-        v = scale .* cellArea;
-    end
+    % Add flow
+    [ii, jj, v] = find(flow);
+    ii = [ii, ones(1, n)];
+    jj = [jj, tofInFront' + currentTime];
+    v = [v, scale .* cellArea];
     flow = sparse(ii, jj, v);
+
 end
