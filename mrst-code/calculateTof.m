@@ -5,7 +5,7 @@ function [CG, tof] = calculateTof(phi, scaleFluxes)
 % height, add that cell to the trap
 
 % Load necessary data and compute geometry
-w = load('watershed.mat'); watershed = w.watershed; outlet = w.outlet;
+w = load('watershed.mat'); watershed = w.watershed; outlet = w.outlet; faceLength = w.stepSize;
 h = load('heights.mat'); heights = h.heights;
 t = load('traps.mat');
 traps = t.traps; nrOfTraps = t.nrOfTraps; trapHeights = t.trapHeights;
@@ -15,9 +15,8 @@ s = load('steepest.mat'); spillPairs = s.spillPairs;
 [~, nCols] = size(heights);
 
 % Pre-process input data, create coarse grid and set heights
-sideLength = 10;
 [heights, fd, ws, spillPairsIndices] = util.preProcessData(heights, flowDirections, watershed, spillPairs);
-CG = util.createCoarseGrid(ws, heights, traps, nrOfTraps, spillPairs, sideLength);
+CG = util.createCoarseGrid(ws, heights, traps, nrOfTraps, spillPairs, faceLength);
 CG.cells.z = util.setHeightsCoarseGrid(CG, heights, trapHeights, nrOfTraps);
 
 % Set flux, rock and source

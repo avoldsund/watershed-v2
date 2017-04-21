@@ -1,8 +1,8 @@
-function flux = calculateFlux(CG, faceNormals, faceFlowDirections, scale)
+function flux = calculateFlux(CG, faceNormals, faceFlowDirections, scale, faceLength)
 %CALCULATEFLUX Something
 %   
 
-    deltaX = 10;
+    deltaX = CG.faceLength;
     flux = sum(faceNormals .* faceFlowDirections, 2);
     
     if ~scale    

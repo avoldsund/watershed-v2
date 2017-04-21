@@ -45,7 +45,7 @@ for i = 1:size(facesPerCell, 1) - nrOfTraps
         if facesPerCell(i) == 1
             faceFlowDirections(interval(chosenIx), :) = CG.cells.fd(i, :);
             % Remember to scale faceNormal by area
-            faceNormals(interval(chosenIx), :) = CG.cells.fd(i, :) * 10;
+            faceNormals(interval(chosenIx), :) = CG.cells.fd(i, :) * CG.faceLength;
         else
             faceFlowDirections(interval(chosenIx), :) = CG.faces.normals(chosenFace, :);
         end
@@ -64,7 +64,7 @@ for i = 1:size(fIx, 1)
     ix = find(fNrmls(:, 1) == 0 & fNrmls(:, 2) == 0);
     if any(d > 0) == -1
         % Remember to scale faceNormal by area
-        faceNormals(interval(ix), :) = CG.cells.fd(cIx, :) * 10; 
+        faceNormals(interval(ix), :) = CG.cells.fd(cIx, :) * CG.faceLength; 
     end
     
 end
