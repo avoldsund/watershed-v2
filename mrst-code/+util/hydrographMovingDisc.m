@@ -1,73 +1,100 @@
-function flow = hydrographMovingDisc(CG, tof, disc)
+function discharge = hydrographMovingDisc(CG, tof, disc, maxTime)
 %CALCULATEHYDROGRAPH Calculate the discharge at the outlet given a moving
 %disc of precipitation.
-%   Detailed explanation goes here
+%   DISCHARGE = HYDROGRAPHMOVINGFRONT(CG, TOF, DISC, MAXTIME) returns the
+%   DISCHARGE from a watershed given a moving disc of precipitation, DISC.
+%   The time-of-flight is given by the TOF variable, with a grid structure
+%   CG. The last parameter MAXTIME describes the time interval
+%   [0, MAXTIME] of the resulting hydrograph.
 
-maxTime = 2500;
-cellArea = 10;
-flow = NaN;
-c = disc.center;
+cellArea = CG.faceLength * CG.faceLength;
+flow = false;
+in = true;
+t = 1;
 
-for time = 1:maxTime
-    % Move precipitation disc and locate cells within
-    [in, x, y, c] = getCellsInDisc(CG, disc, c, time);
-    if all(in == 0) % No cells in disc
-       break 
+while any(in) == 1 & t < maxTime
+    [flow, in] = getDischarge(CG, tof, flow, disc, maxTime, cellArea, t);
+
+    if t == 1358
+        disp('hei')
+        hold on
+        tVec = 0 : 0.01 : 2 * pi;
+        x = cos(tVec) * disc.radius + disc.center(1);
+        y = sin(tVec) * disc.radius + disc.center(2);
+        plot(x, y, 'b', 'Linewidth', 3);
+        cellCent = CG.parent.cells.centroids;
+        centroidsInside = cellCent(in, :);
+        %plot(centroidsInside(:, 1), centroidsInside(:, 2), 'b*', 'MarkerSize', 16, 'LineWidth', 1);
+        plot(centroidsInside(:, 1), centroidsInside(:, 2), 'b*', 'MarkerSize', 24, 'LineWidth', 4);
     end
-    
-    %hold on
-    %plot(x, y, 'r', 'Linewidth', 3);
-    %cellCent = CG.parent.cells.centroids;
-    %centroidsInside = cellCent(in, :);
-    %plot(centroidsInside(:, 1), centroidsInside(:, 2), 'b*');
-    
-    flow = updateFlow(CG, tof, flow, disc, in, c, maxTime, cellArea, time);
+
+    disc = moveDisc(disc);
+    t = t + 1;
 end
 
-flow = flow * (10^-3)/60;
+flow = flow * (10^-3) / 3600;
+
+% Remove flow less than machine epsilon
+discharge = zeros(maxTime, 1);
+[~, jj, v] = find(flow);
+validIx = v > eps;
+discharge(jj(validIx)) = v(validIx);
+
 end
 
-
-function [in, x, y, center] = getCellsInDisc(CG, disc, center, currentTime)
-    % Moves the disc and finds the cells located within the moved disc
+function disc = moveDisc(disc)
     
-    cellCent = CG.parent.cells.centroids;    
+    disc.center = bsxfun(@plus, disc.center, disc.direction * disc.velocity);
+    
+end
+
+function [flow, in] = getDischarge(CG, tof, flow, disc, maxTime, cellArea, currentTime)
+    
+    % Cells in storm front
     t = 0 : 0.01 : 2 * pi;
-    center(1) = disc.center(1) + disc.direction(1) * disc.speed * (currentTime - 1);
-    center(2) = disc.center(2) + disc.direction(2) * disc.speed * (currentTime - 1);
-    x = cos(t) * disc.radius + center(1);
-    y = sin(t) * disc.radius + center(2);
+    x = cos(t) * disc.radius + disc.center(1);
+    y = sin(t) * disc.radius + disc.center(2);
+    cellCent = CG.parent.cells.centroids;
     in = inpolygon(cellCent(:, 1), cellCent(:, 2), x, y);
-end
-
-function flow = updateFlow(CG, tof, flow, disc, in, c, maxTime, cellArea, currentTime)
-    % Update flow, of if flow does not exist yet, create the matrix
+    frontIndices = find(in);
     
-    tofOfIn = tof(CG.partition(in));
-    contrFlow = tofOfIn(tofOfIn + currentTime <= maxTime);
-    n = size(contrFlow, 1);
+    % Map the time-of-flight from coarse grid to fine grid
+    tofInFront = tof(CG.partition(in));
+    
+    % Of these, only include cells where their precipitation reaches the outlet
+    % before maxTime
+    validFrontIndices = tofInFront + currentTime <= maxTime;
+    frontIndices = frontIndices(validFrontIndices);
+    tofInFront = tofInFront(validFrontIndices);
+    
+    n = size(tofInFront, 1);
     scale = ones(1, n);
+    cellCentroids = cellCent(frontIndices, :);
     
-    indices = find(in);
-    validIndices = indices(tofOfIn + currentTime <= maxTime);
-    cellCentroids = CG.parent.cells.centroids(validIndices, :);
-    
+    % Different cells get different intensities
     if disc.gaussian
         g = @(r, A, R) A * exp(-((r.^2)/(2 * (R/3)^2)));
-        distanceFromCenter = util.calculateEuclideanDist(cellCentroids, c);
+        distanceFromCenter = util.calculateEuclideanDist(cellCentroids, disc.center);
         assert(any(distanceFromCenter > disc.radius) == 0);
         scale = g(distanceFromCenter, disc.amplitude, disc.radius)';
+    else
+        scale = scale * disc.amplitude;
     end
     
-    if ~isnan(flow)
-        [ii, jj, v] = find(flow);
-        ii = [ii, ones(1, n)];
-        jj = [jj, contrFlow' + currentTime];
-        v = [v, scale .* cellArea];
-    else
-        ii = ones(1, n);
-        jj = contrFlow' + currentTime;
-        v = scale .* cellArea;
+    % Add flow
+    [ii, jj, v] = find(flow);
+    ii = [ii, ones(1, n)];
+    jj = [jj, tofInFront' + currentTime];
+    v = [v, scale .* cellArea];
+    
+    if currentTime == 1358
+       sum(v)* 1 / (3600*10^3)
+       in = false;
     end
+    if min(v) < 10^-4
+        disp('hei')
+    end
+        
     flow = sparse(ii, jj, v);
+
 end

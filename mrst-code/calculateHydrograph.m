@@ -5,39 +5,26 @@ scaleFluxes = true;
 [CG, tof] = calculateTof(phi, scaleFluxes);
 tof = ceil(tof);
 showTofCentroids = false;
-ftof = plot.tof(CG, tof, showTofCentroids, false);
+cellIndices = false;
+f = plot.tof(CG, tof, showTofCentroids, cellIndices);
+
 
 %% Uniform hydrograph
 
+A = 10; % mm/hour
+duration = 3600; % seconds
+discharge = util.hydrographUniform(CG, tof, A, duration);
 
-amount = 10; % mm/hour
-duration = 600;
-discharge = util.hydrographUniform(CG, tof, amount, duration);
+saveName = strcat('uH', 'P', int2str(A), 'D', int2str(duration));
+saveName = strcat(saveName, '.eps');
 
-saveName = strcat('uniformHydrographNoScaling', 'P', int2str(amount), 'D', int2str(duration));
-plot.hydrograph(discharge, saveName)
-
-%% Make disc hydrograph
- 
-% Direction and speed of disc precipitation
-d = [1, 0];
-v = 3;
-
-% Disc properties
-c0 = [10, 10];
-r = 10;
-intensity = 10;
-gaussian = true;
-disc = struct('radius', r, 'center', c0,...
-    'direction', d, 'speed', v, 'gaussian', gaussian, 'amplitude', intensity);
-
-hydrograph = util.hydrographMovingDisc(CG, tof, disc);
-
+h = plot.hydrograph(discharge, saveName);
+export_fig(saveName, h, '-eps')
 
 %% Make moving front
 
 % Define movement
-d = [0, 1];
+d = [0, 1]; % No need to normalize
 frontSize = 10;
 offset = frontSize / 2;
 
@@ -81,17 +68,49 @@ end
 corners = [cornersX; cornersY]';
 
 intensity = 10; % mm/hour
-v = 1; % m/s
-gaussian = false;
+v = 5; % m/s
+gaussian = true;
 maxTime = 650;
 
-front = struct('amplitude', intensity, 'velocity', v, 'direction', d, 'frontSize', frontSize, ...
-    'center', center, 'corners', corners, 'gaussian', gaussian);
+front = struct('amplitude', intensity,...
+               'velocity', v,...
+               'direction', d,...
+               'frontSize', frontSize,...
+               'center', center,...
+               'corners', corners,...
+               'gaussian', gaussian);
 
-discharge = util.hydrographMovingFront(CG, tof, front, maxTime);
+discharge = util.hydrographMovingFront(CG, tof, front, maxTime, f);
 
 saveName = strcat('frontHydrograph', 'I', num2str(intensity), 'v', num2str(v), 'D', strcat(int2str(d(1)), int2str(d(2))));
 
-h = plot.hydrograph(discharge, saveName);
+h = plot.hydrograph(discharge, maxTime);
 export_fig(saveName, h, '-eps')
 
+
+%% Make disc hydrograph
+ 
+% Direction and speed of disc precipitation
+d = [1, 1];
+d = d ./ sqrt(sum(d.^2)) % Normalize
+v = 0.1;
+maxTime = 1300;
+
+% Disc properties
+c0 = [10, 10];
+r = 30;
+intensity = 1.11;
+gaussian = true;
+disc = struct('radius', r, ...
+              'center', c0,...
+              'direction', d, ...
+              'velocity', v, ...
+              'gaussian', gaussian, ...
+              'amplitude', intensity);
+
+discharge = util.hydrographMovingDisc(CG, tof, disc, maxTime, f);
+
+saveName = strcat('discRadius30.eps');
+h = plot.hydrograph(discharge, maxTime);
+
+export_fig(saveName, h, '-eps')

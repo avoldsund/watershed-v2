@@ -1,13 +1,13 @@
-function discharge = hydrographMovingFront(CG, tof, front, maxTime)
+function discharge = hydrographMovingFront(CG, tof, front, maxTime, f)
 %CALCULATEHYDROGRAPH Calculate the discharge at the outlet given a moving
 %front of precipitation.
-%   FLOW = HYDROGRAPHMOVINGFRONT(CG, TOF, FRONT, MAXTIME) returns the FLOW from a
-%   watershed given a moving front with precipitation, FRONT. The
-%   time-of-flight is given by the TOF variable, with a grid structure CG.
-%   The last parameter MAXTIME describes the time interval [0, MAXTIME] of
-%   the resulting hydrograph.
+%   DISCHARGE = HYDROGRAPHMOVINGFRONT(CG, TOF, FRONT, MAXTIME) returns the 
+%   DISCHARGE from a watershed given a moving front with precipitation, 
+%   FRONT. The time-of-flight is given by the TOF variable, with a grid
+%   structure CG. The last parameter MAXTIME describes the time interval
+%   [0, MAXTIME] of the resulting hydrograph.
 
-cellArea = 10;
+cellArea = 100;
 flow = false;
 in = true;
 t = 1;
@@ -17,11 +17,10 @@ while any(in) == 1 & t < maxTime
     [flow, in] = getDischarge(CG, tof, flow, front, maxTime, cellArea, t);
 
     hold on
-    plot([front.corners(:, 1); front.corners(1, 1)], [front.corners(:, 2); front.corners(1, 2)], 'Linewidth', 3);
+    plot([front.corners(:, 1); front.corners(1, 1)], [front.corners(:, 2); front.corners(1, 2)], 'b-', 'Linewidth', 4);
     cellCent = CG.parent.cells.centroids;
     centroidsInside = cellCent(in, :);
-    plot(centroidsInside(:, 1), centroidsInside(:, 2), 'b*', 'MarkerSize', 16);
-    
+    plot(centroidsInside(:, 1), centroidsInside(:, 2), 'b*', 'MarkerSize', 24, 'LineWidth', 4);
     front = moveFront(front);
     t = t + 1;
 end
