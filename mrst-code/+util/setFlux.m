@@ -62,8 +62,8 @@ for i = 1:size(fIx, 1)
     [~, fNrmls, ~] = util.flipNormalsOutwards(CG, cIx);
     d = sum(fNrmls .* faceFlowDirections(interval, :), 2);
     ix = find(fNrmls(:, 1) == 0 & fNrmls(:, 2) == 0);
-    if any(d > 0) == -1
-        % Remember to scale faceNormal by area
+    if any(d > 0) == 0
+        % Remember to scale faceNormal by face area
         faceNormals(interval(ix), :) = CG.cells.fd(cIx, :) * CG.faceLength; 
     end
     
@@ -82,8 +82,6 @@ for i = 1:nrOfTraps
         faceFlowDirections(indices, :) = repelem(CG.cells.fd(trapCellIx, :), size(spFaces, 2), 1);
     end    
 end
-
-
 
 flux = util.calculateFlux(CG, faceNormals, faceFlowDirections, scale);
 
