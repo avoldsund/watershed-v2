@@ -711,7 +711,6 @@ def get_steepest_spill_pair(heights, spill_pairs, d4):
     Return a list of tuples where each tuple is the spill pair for each watershed
     :param heights: Heights of terrain
     :param spill_pairs: List of lists. Each list contains two arrays in from-to format
-    :param d4: Use the D4-method instead of D8
     :return steepest_spill_pairs: Set containing the steepest spill pairs
     """
 
@@ -725,7 +724,7 @@ def get_steepest_spill_pair(heights, spill_pairs, d4):
 
         card_indices = np.where(np.logical_or(diff == 1, diff == cols))[0]
         diag_indices = np.setdiff1d(np.arange(0, len(spill_pairs[i][0]), 1), card_indices)
-        card_der = (heights[spill_pairs[i][0][card_indices]] - heights[spill_pairs[i][1][card_indices]])/10
+        card_der = (heights[spill_pairs[i][0][card_indices]] - heights[spill_pairs[i][1][card_indices]])/10.0
         diag_der = (heights[spill_pairs[i][0][diag_indices]] - heights[spill_pairs[i][1][diag_indices]])/math.sqrt(200)
         derivatives[card_indices] = card_der
         derivatives[diag_indices] = diag_der
@@ -1106,10 +1105,10 @@ def make_landscape_depressionless(watersheds, steepest_spill_pairs, landscape):
     traps, size_of_traps = get_all_traps(watersheds, landscape.heights, spill_heights)
 
     for i in range(len(traps)):
-        landscape.heights[map_1d_to_2d(np.asarray(traps[i]), landscape.ny)] = spill_heights[i]
+        landscape.heights[map_1d_to_2d(np.asarray(traps[i]), landscape.nx)] = spill_heights[i]
 
 
-def make_landscape_depressionless_no_landscape_input(watersheds, steepest_spill_pairs, heights, ny):
+def make_landscape_depressionless_no_landscape_input(watersheds, steepest_spill_pairs, heights, nx):
     """
     Makes the landscape depressionless by filling the traps to the spill heights. It is important that watersheds
     spilling into each other have been combined. The result is a monotonically decreasing landscape.
@@ -1124,7 +1123,7 @@ def make_landscape_depressionless_no_landscape_input(watersheds, steepest_spill_
     traps, size_of_traps = get_all_traps(watersheds, heights, spill_heights)
 
     for i in range(len(traps)):
-        heights[map_1d_to_2d(np.asarray(traps[i]), ny)] = spill_heights[i]
+        heights[map_1d_to_2d(np.asarray(traps[i]), nx)] = spill_heights[i]
 
 
 def make_depressionless(heights, step_size, d4):
