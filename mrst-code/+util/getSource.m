@@ -1,10 +1,17 @@
 function [src, trapNr] = getSource(CG, outletCoord, traps, nCols, srcStrength)
-%GETSOURCE Summary of this function goes here
-%   Detailed explanation goes here
+%GETSOURCE Returns the cell index of the source
+%   [src, trapNr] = GETSOURCE(CG, OUTLETCOORD, TRAPS, NCOLS, SRCSTRENGTH)
+%   returns the index of the source given the outlet with coordinate
+%   OUTLETCOORD. It checks whether the outlet is in a trap, in which case
+%   the numbering is different. The source is assigned the strength
+%   SRCSTRENGTH.
+%
+%   NOTE: In some examples the source is off by one. If some cells get a
+%   maximum time-of-flight, try to adjust the source at the end in this
+%   function.
 
 nrOfTraps = size(traps, 1);
 outlet = double(outletCoord);
-%outlet = [10 * outlet(2), 10 * nCols - 10 * outlet(1)];
 
 % Check if outlet is in a trap
 for i = 1:nrOfTraps
@@ -36,7 +43,7 @@ while noSrc
     end
 end
 
-%src = src + 1; % ONLY FOR THE LARGE WATERSHED
+% src = src + 1; % ONLY FOR THE LARGE WATERSHED
 src = addSource([], src, -srcStrength);
 trapNr = NaN;
 
