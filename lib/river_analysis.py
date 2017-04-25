@@ -570,7 +570,7 @@ def calculate_watershed_of_node_no_landscape_input(heights, nx, ny, step_size, o
     traps, size_of_traps = util.get_all_traps(watersheds, heights, spill_heights)
 
     # Increase heights of traps and recalculate flow. Remove flow from some indices in traps.
-    util.make_landscape_depressionless_no_landscape_input(watersheds, steepest, heights, ny)
+    util.make_landscape_depressionless_no_landscape_input(watersheds, steepest, heights, nx)
     flow = util.get_flow_direction_indices(heights, step_size, ny, nx, d4)
     flow_dir = util.get_flow_directions(heights, step_size, ny, nx, d4)
 
