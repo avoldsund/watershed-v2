@@ -23,7 +23,7 @@ for i = 1:nrOfTraps
     endIx = CG.cells.facePos(N+i+1)-1;
     faces = CG.cells.faces(startIx:endIx);
     nbrCells = CG.faces.neighbors(faces);
-    
+
     % Valid interval removes flow directions to cells out of boundary
     validIx = find(nbrCells);
     validNbrs = nbrCells(validIx);
@@ -34,25 +34,29 @@ for i = 1:nrOfTraps
     faceFlowDirections(validInterval, :) = flowDirOnFaces;
 end
 
-% Correct face flow directions for cells with only two faces
+% Why faces without flow directions??? Faces with neighbor out of domain
+% boundary (cell 0)
+
+% Correct face flow directions for cells with one or two faces
 for i = 1:size(facesPerCell, 1) - nrOfTraps
     if facesPerCell(i) == 2 || facesPerCell(i) == 1
+        
         interval = CG.cells.facePos(i):CG.cells.facePos(i+1)-1;
         faceIx = CG.cells.faces(interval);
         nbrs = CG.faces.neighbors(faceIx, :);
-        chosenIx = nbrs(find(nbrs ~= i)) > N;
-        chosenFace = faceIx(chosenIx);
+        chosenIx = nbrs(find(nbrs ~= i)) > N; % Get trap cell nbr
+        chosenFace = faceIx(chosenIx); % Get cell facing towards trap
+        
         if facesPerCell(i) == 1
-            faceFlowDirections(interval(chosenIx), :) = CG.cells.fd(i, :);
-            % Remember to scale faceNormal by area
             faceNormals(interval(chosenIx), :) = CG.cells.fd(i, :) * CG.faceLength;
         else
-            faceFlowDirections(interval(chosenIx), :) = CG.faces.normals(chosenFace, :);
+            faceFlowDirections(interval(chosenIx), :) = bsxfun(@rdivide, CG.faces.normals(chosenFace, :), sqrt(sum(CG.faces.normals(chosenFace, :).^2, 2)));
         end
     end
 end
 
-% Possibly change face normals for cells where face normal is [0, 0]
+% Possibly change face normals for cells where face normal is [0, 0].
+% Only happens when traps are involved and a cell has three faces.
 fIx = find(CG.faces.normals(:, 1) == 0 & CG.faces.normals(:, 2) == 0);
 faceCoords = CG.faces.centroids(fIx, :);
 for i = 1:size(fIx, 1)
@@ -62,25 +66,45 @@ for i = 1:size(fIx, 1)
     [~, fNrmls, ~] = util.flipNormalsOutwards(CG, cIx);
     d = sum(fNrmls .* faceFlowDirections(interval, :), 2);
     ix = find(fNrmls(:, 1) == 0 & fNrmls(:, 2) == 0);
-    if any(d > 0) == 0
+    if any(d > 0) == 0 % Check for any outflow
         % Remember to scale faceNormal by face area
         faceNormals(interval(ix), :) = CG.cells.fd(cIx, :) * CG.faceLength; 
     end
-    
 end
 
 % Change faceFlowDirection for spill pair face to ensure flow out of trap
 for i = 1:nrOfTraps
     if i == outletTrapNr
-       continue 
+        continue 
     end
     trapCellIx = CG.cells.num - nrOfTraps + i;
-
+    if trapCellIx == 139015
+       disp('heeeey') 
+    end
     [spFaces, indices] = util.getSpillPointFace(CG, nrOfTraps, i);
+    
     if size(indices, 2) > 1
         faceFlowDirections = util.fixDiagonalFlowFromTrap(CG, spFaces, trapCellIx, faceFlowDirections);
         faceFlowDirections(indices, :) = repelem(CG.cells.fd(trapCellIx, :), size(spFaces, 2), 1);
-    end    
+    else
+        nbrCell = CG.faces.neighbors(spFaces, :);
+        nbrCell = nbrCell(nbrCell ~= trapCellIx);
+        
+        % This should be more accurate than the line below, as the
+        % faceFlowDirections and faceNormals have been changed for a reason
+        % during the algorithm
+        dp = sum((faceNormals(indices, :) ~= 0) .* faceFlowDirections(indices, :));
+        %dp = sum((CG.faces.normals(spFaces, :) ~= 0) .* CG.cells.fd(nbrCell, :));
+        if dp == 0 % dotProduct of faceNbr is zero, set faceFlowDir to faceNormal
+            % Flip the faceNormal as they point inward. No flip if nbrCell
+            % is trapCell
+            if nbrCell > CG.cells.num - nrOfTraps
+                faceFlowDirections(indices, :) = bsxfun(@rdivide, CG.faces.normals(spFaces, :), sqrt(sum(CG.faces.normals(spFaces, :).^2, 2)));
+            else
+                faceFlowDirections(indices, :) = bsxfun(@rdivide, -CG.faces.normals(spFaces, :), sqrt(sum(CG.faces.normals(spFaces, :).^2, 2)));
+            end
+        end
+    end
 end
 
 flux = util.calculateFlux(CG, faceNormals, faceFlowDirections, scale);
