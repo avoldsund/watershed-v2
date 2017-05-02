@@ -1,6 +1,10 @@
-function flux = calculateFlux(CG, faceNormals, faceFlowDirections, scale, faceLength)
-%CALCULATEFLUX Something
-%   
+function flux = calculateFlux(CG, faceNormals, faceFlowDirections, scale)
+%CALCULATEFLUX returns the fluxes given face normals and the flow
+%directions over the face.
+%   FLUX = CALCULATEFLUX(CG, FACENORMALS, FACEFLOWDIRECTIONS, SCALE) takes
+%   the coarse grid CG, altered face normals FACENORMALS and altered face flow
+%   directions FACEFLOWDIRECTIONS. If SCALE is true, the fluxes use
+%   elevation data to scale them.
 
     deltaX = CG.faceLength;
     flux = sum(faceNormals .* faceFlowDirections, 2);
@@ -14,17 +18,16 @@ function flux = calculateFlux(CG, faceNormals, faceFlowDirections, scale, faceLe
     deltaZ = zeros(N, 1);
     
     for i = 1:CG.cells.num
+        % Identify which faces have outflow and inflow
         indices = CG.cells.facePos(i) : CG.cells.facePos(i + 1) - 1;
         [faceFlipped, ~, sign] = util.flipNormalsOutwards(CG, i);
         faceFluxes = sign .* flux(indices);
         
         nbrs = CG.faces.neighbors(faceFlipped, :);
         nbrs(sign == -1, :) = fliplr(nbrs(sign == -1, :));
-        % invalidIndices = nbrs(:, 1) == 0 | nbrs(:, 2) == 0;
         validIndices = nbrs(:, 1) ~= 0 & nbrs(:, 2) ~= 0;
 
         ixValid = indices(validIndices);
-        % ixInvalid = indices(invalidIndices);
         validNbrs = nbrs(validIndices, :);
         validD = faceFluxes(validIndices, :);
         outFlow = validD > 0;
