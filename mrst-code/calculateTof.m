@@ -4,13 +4,17 @@ function [CG, tof] = calculateTof(phi, scaleFluxes)
 % From pre-processing: if a trap is spilling over into a cell at equal
 % height, add that cell to the trap
 
-% Load necessary data and compute geometry
-w = load('watershed.mat'); watershed = w.watershed; outlet = w.outlet; faceLength = w.stepSize;
-h = load('heights.mat'); heights = h.heights;
-t = load('traps.mat');
-traps = t.traps; nrOfTraps = t.nrOfTraps; trapHeights = t.trapHeights;
-f = load('flowDirections.mat'); flowDirections = f.flowDirections;
-s = load('steepest.mat'); spillPairs = s.spillPairs;
+% Load data
+l = load('landscapeXXL.mat');
+watershed = l.watershed; 
+outlet = l.outlet; 
+faceLength = double(l.stepSize);
+heights = l.heights;
+traps = l.traps;
+nrOfTraps = l.nrOfTraps;
+trapHeights = l.trapHeights;
+flowDirections = l.flowDirections;
+spillPairs = l.spillPairs;
 
 [~, nCols] = size(heights);
 
@@ -28,9 +32,9 @@ state = struct('flux', flux);
 rock = util.setPorosity(CG, nrOfTraps, phi);
 
 % Calculate time-of-flight and subtract time it takes to fill src
-maxTime = 10^8;
+maxTime = 10^9;
 tof = computeTimeOfFlight(state, CG, rock, 'src', src, ...
-   'maxTOF', maxTime, 'reverse', true);
+   'maxTOF', maxTime, 'reverse', true, 'processCycles', true);
 tof = tof - min(tof);
 
 end
