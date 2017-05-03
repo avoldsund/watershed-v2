@@ -17,19 +17,17 @@ function flux = calculateFlux(CG, faceNormals, faceFlowDirections, scale)
     N = size(CG.cells.faces, 1);
     deltaZ = zeros(N, 1);
     
+    [~, ~, nbrs, nbrPairs, signs] = util.flipAllNormals(CG);
+    allFaceFluxes = signs .* flux;
+    
     for i = 1:CG.cells.num
         % Identify which faces have outflow and inflow
         indices = CG.cells.facePos(i) : CG.cells.facePos(i + 1) - 1;
-        [faceFlipped, ~, sign] = util.flipNormalsOutwards(CG, i);
-        faceFluxes = sign .* flux(indices);
-        
-        nbrs = CG.faces.neighbors(faceFlipped, :);
-        nbrs(sign == -1, :) = fliplr(nbrs(sign == -1, :));
-        validIndices = nbrs(:, 1) ~= 0 & nbrs(:, 2) ~= 0;
+        validIndices = nbrs(indices) ~= 0;
 
         ixValid = indices(validIndices);
-        validNbrs = nbrs(validIndices, :);
-        validD = faceFluxes(validIndices, :);
+        validNbrs = nbrPairs(ixValid, :);
+        validD = allFaceFluxes(ixValid, :);
         outFlow = validD > 0;
         inFlow = validD < 0;
         
