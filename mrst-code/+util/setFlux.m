@@ -1,6 +1,10 @@
 function [flux, faceFlowDirections] = setFlux(CG, nrOfTraps, outletTrapNr, scale)
-%SETFLUX Summary of this function goes here
-%   Detailed explanation goes here
+%SETFLUX returns the fluxes for all faces in the coarse grid
+%   [FLUX, FACEFLOWDIRECTIONS] = SETFLUX(CG, NROFTRAPS, OUTLETTRAPNR,
+%   SCALE) calculates the fluxes FLUX for all faces in the coarse grid CG.
+%   The flow directions of the faces FACEFLOWDIRECTIONS are also returned.
+%   SCALE tells whether the fluxes shall be scaled by the elevations in the
+%   landscape.
 
 % Calculate flux for notTrapCells
 N = CG.cells.num - nrOfTraps;
@@ -8,34 +12,22 @@ N = CG.cells.num - nrOfTraps;
 % Dot product of face normals and flow direction vectors
 faceIndices = CG.cells.faces(:, 1);
 faceNormals = CG.faces.normals(faceIndices, :);
-
 facesPerCell = CG.cells.facePos(2:end) - CG.cells.facePos(1:end-1);
-faceFlowDirections = zeros(sum(facesPerCell), 2);
 
 % Set flow directions for all faces not in a trap
-for i = 1:size(facesPerCell, 1) - nrOfTraps
-    faceFlowDirections(CG.cells.facePos(i):CG.cells.facePos(i+1)-1, :) = repelem(CG.cells.fd(i, :), facesPerCell(i), 1);
-end
+nRegularFaces = sum(facesPerCell(1:CG.cells.num - nrOfTraps));
+allCellIndices = repelem(1:CG.cells.num, diff(CG.cells.facePos))';
+faceFlowDirections = zeros(sum(facesPerCell), 2);
+faceFlowDirections(1:nRegularFaces, :) = CG.cells.fd(allCellIndices(1:nRegularFaces), :);
 
-% Set flow directions for all faces in traps
-for i = 1:nrOfTraps
-    startIx = CG.cells.facePos(N+i);
-    endIx = CG.cells.facePos(N+i+1)-1;
-    faces = CG.cells.faces(startIx:endIx);
-    nbrCells = CG.faces.neighbors(faces);
-
-    % Valid interval removes flow directions to cells out of boundary
-    validIx = find(nbrCells);
-    validNbrs = nbrCells(validIx);
-    interval = startIx:endIx;
-    validInterval = interval(validIx);
-    
-    flowDirOnFaces = CG.cells.fd(validNbrs, :);
-    faceFlowDirections(validInterval, :) = flowDirOnFaces;
-end
-
-% Why faces without flow directions??? Faces with neighbor out of domain
-% boundary (cell 0)
+% Set flow directions for all faces in traps. As nbr cells at the outside
+% of the domain has no flow direction, we remove nbrs that are 0.
+trapFaces = faceIndices(nRegularFaces + 1:end);
+tNbrs = CG.faces.neighbors(trapFaces, 1);
+validNbrs = tNbrs ~= 0;
+interval = (nRegularFaces + 1:size(CG.cells.faces, 1))';
+trapNbrs = tNbrs(validNbrs);
+faceFlowDirections(interval(validNbrs), :) = CG.cells.fd(trapNbrs, :);
 
 % Correct face flow directions for cells with one or two faces
 for i = 1:size(facesPerCell, 1) - nrOfTraps
@@ -72,44 +64,93 @@ for i = 1:size(fIx, 1)
     end
 end
 
-% Change faceFlowDirection for spill pair face to ensure flow out of trap
+% Change faceFlowDirection for spill pair faces to ensure outflow from trap
 for i = 1:nrOfTraps
+    % Do not alter the faces in the trap if the watershed outlet is a part
+    % of it
     if i == outletTrapNr
         continue 
     end
-    trapCellIx = CG.cells.num - nrOfTraps + i;
-    if trapCellIx == 139015
-       disp('heeeey') 
-    end
-    [spFaces, indices] = util.getSpillPointFace(CG, nrOfTraps, i);
     
-    if size(indices, 2) > 1
-        faceFlowDirections = util.fixDiagonalFlowFromTrap(CG, spFaces, trapCellIx, faceFlowDirections);
-        faceFlowDirections(indices, :) = repelem(CG.cells.fd(trapCellIx, :), size(spFaces, 2), 1);
-    else
-        nbrCell = CG.faces.neighbors(spFaces, :);
-        nbrCell = nbrCell(nbrCell ~= trapCellIx);
+    % Retrieve spill faces in each trap and set the face flow directions to
+    % be the flow direction of the outlet.
+    trapCellIx = CG.cells.num - nrOfTraps + i;
+    [spFaces, indices] = util.getSpillPointFace(CG, nrOfTraps, i);
+    faceFlowDirections(indices, :) = repelem(CG.cells.fd(trapCellIx, :), size(spFaces, 2), 1);
+    
+    % Make sure that the neighbors of the spill faces do not cancel out the
+    % flow from the trap.
+    nbrs = CG.faces.neighbors(spFaces, :);
+    nbrs = nbrs(nbrs ~= trapCellIx);
+    % If any of the neighbors are at the boundary, return
+    if any(nbrs == 0)
+        continue
+    end
+    
+    for ix = 1:size(spFaces, 2)
+        % Find outflow faces from the neighbor
+        [faces, nrmls] = util.flipNormalsOutwards(CG, nbrs(ix));
+        nbrFaces = CG.cells.facePos(nbrs(ix)):CG.cells.facePos(nbrs(ix)+1)-1;
+        dp = sum(bsxfun(@times, nrmls, faceFlowDirections(nbrFaces, :)), 2);
         
-        % This should be more accurate than the line below, as the
-        % faceFlowDirections and faceNormals have been changed for a reason
-        % during the algorithm
-        dp = sum((faceNormals(indices, :) ~= 0) .* faceFlowDirections(indices, :));
-        %dp = sum((CG.faces.normals(spFaces, :) ~= 0) .* CG.cells.fd(nbrCell, :));
-        if dp == 0 % dotProduct of faceNbr is zero, set faceFlowDir to faceNormal
-            % Flip the faceNormal as they point inward. No flip if nbrCell
-            % is trapCell
-            if nbrCell > CG.cells.num - nrOfTraps
-                faceFlowDirections(indices, :) = bsxfun(@rdivide, CG.faces.normals(spFaces, :), sqrt(sum(CG.faces.normals(spFaces, :).^2, 2)));
-            else
-                faceFlowDirections(indices, :) = bsxfun(@rdivide, -CG.faces.normals(spFaces, :), sqrt(sum(CG.faces.normals(spFaces, :).^2, 2)));
+        % If the nbr only has outflow towards the trap, change its face
+        % flow directions
+        posIndices = find(dp > 0);
+        if faces(posIndices) == spFaces(1, ix)% & size(posIndices, 1) == 1
+            newFlowDir = CG.cells.fd(trapCellIx, :) .* sqrt(2) + CG.cells.fd(nbrs(ix), :);
+            %assert(sqrt(newFlowDir(1)^2+newFlowDir(2)^2) == 1)
+            faceFlowDirections(nbrFaces, :) = rldecode(newFlowDir, size(nbrFaces, 2));
+            
+            % If one of the nbr's faces is a trap cell, change the face
+            % flow direction of the common face
+            nbrsOfFaces = CG.faces.neighbors(faces, :);
+            % nTrapCells = unique(nbrsOfFaces(nbrsOfFaces ~= trapCellIx & nbrsOfFaces > CG.cells.num-nrOfTraps  & nbrsOfFaces ~= faces));
+            nTrapCells = unique(nbrsOfFaces(nbrsOfFaces ~= trapCellIx & nbrsOfFaces > CG.cells.num-nrOfTraps  & ~ismember(nbrsOfFaces, faces)));
+            
+            for j = 1:size(nTrapCells, 1)
+                tCell = nTrapCells(j);
+                tFaces = util.getCellFaces(CG, tCell);
+                tFaceIndices = CG.cells.facePos(tCell):CG.cells.facePos(tCell + 1) - 1;
+                commonIx = ismember(tFaces, faces);
+                indices = tFaceIndices(commonIx);
+                if size(indices, 2) > 1
+                   disp('wwwwwaaaaat') 
+                end
+                faceFlowDirections(indices, :) = rldecode(CG.cells.fd(trapCellIx, :), size(indices, 2));
             end
         end
     end
 end
 
 flux = util.calculateFlux(CG, faceNormals, faceFlowDirections, scale);
-
-% Do the average of fluxes
 flux = util.averageFluxes(faceIndices, flux);
+
+% for i = 1:CG.cells.num
+%     faces = util.getCellFaces(CG, i);
+%     nbrs = CG.faces.neighbors(faces, :);
+%     if sum(any(nbrs ~= 0 & nbrs ~= i)) > 0
+%         continue
+%     else
+%         flux(faces) = 0;
+%     end
+% end
+
+% for i = 1:CG.cells.num
+%     faces = util.getCellFaces(CG, i);
+%     nbrs = CG.faces.neighbors(faces, :);
+%     % Identify which faces have outflow and inflow
+%     faces = util.getCellFaces(CG, i);
+%     [faceFlipped, ~, sign] = util.flipNormalsOutwards(CG, i);
+%     faceFluxes = sign .* flux(faces);
+%     if all(faceFluxes <= 0) & sum(any(nbrs ~= 0 & nbrs ~= i)) > 0 & i ~= 77355
+%         if i > CG.cells.num - nrOfTraps % it is a trap
+%             [spFaces, indices] = util.getSpillPointFace(CG, nrOfTraps, i-(CG.cells.num - nrOfTraps));
+%             flux(spFaces) = 0.1 * sign(ismember(spFaces, faceFlipped));
+%         else
+%             disp('noTrap')
+%         end
+%         
+%     end
+% end
 
 end
