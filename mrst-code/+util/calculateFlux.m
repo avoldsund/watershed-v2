@@ -17,36 +17,40 @@ function flux = calculateFlux(CG, faceNormals, faceFlowDirections, scale)
     N = size(CG.cells.faces, 1);
     deltaZ = zeros(N, 1);
     
-    [~, ~, nbrs, nbrPairs, signs] = util.flipAllNormals(CG);
+    [~, ~, ~, nbrs, nbrPairs, signs] = util.flipAllNormals(CG);
     allFaceFluxes = signs .* flux;
     
-    for i = 1:CG.cells.num
-        % Identify which faces have outflow and inflow
-        indices = CG.cells.facePos(i) : CG.cells.facePos(i + 1) - 1;
-        validIndices = nbrs(indices) ~= 0;
-
-        ixValid = indices(validIndices);
-        validNbrs = nbrPairs(ixValid, :);
-        validD = allFaceFluxes(ixValid, :);
-        outFlow = validD > 0;
-        inFlow = validD < 0;
-        
-        deltaOutFlow = CG.cells.z(validNbrs(outFlow, 1)) - CG.cells.z(validNbrs(outFlow, 2));
-        deltaInFlow = CG.cells.z(validNbrs(inFlow, 2)) - CG.cells.z(validNbrs(inFlow, 1));
-        
-        ixOut = ixValid(outFlow);
-        posOut = deltaOutFlow > 0;
-        negOut = deltaOutFlow <= 0;
-        deltaZ(ixOut(negOut)) = 0.1;
-        deltaZ(ixOut(posOut)) = deltaOutFlow(posOut);
-        
-        ixIn = ixValid(inFlow);
-        posIn = deltaInFlow > 0;
-        negIn = deltaInFlow <= 0;        
-        deltaZ(ixIn(negIn)) = 0.1;
-        deltaZ(ixIn(posIn)) = deltaInFlow(posIn);
-    end
+    % Separate faces into outflow and inflow faces
+    indices = (1:N)';
+    validIndices = nbrs ~= 0;
+    ixValid = indices(validIndices);
+    validNbrs = nbrPairs(ixValid, :);
+    validDp = allFaceFluxes(ixValid, :);
+    outFlow = validDp > 0;
+    inFlow = validDp < 0;
     
+    % Elevation difference
+    deltaOutFlow = CG.cells.z(validNbrs(outFlow, 1)) - CG.cells.z(validNbrs(outFlow, 2));
+    deltaInFlow = CG.cells.z(validNbrs(inFlow, 2)) - CG.cells.z(validNbrs(inFlow, 1));
+
+    % If elevation differences are positive, use those for alpha, if not,
+    % set the scaling to a constant
+    % Treat outflow faces
+    ixOut = ixValid(outFlow);
+    posOut = deltaOutFlow > 0;
+    negOut = deltaOutFlow <= 0;
+    deltaZ(ixOut(negOut)) = 0.1;
+    deltaZ(ixOut(posOut)) = deltaOutFlow(posOut);
+
+    % Treat inflow faces
+    ixIn = ixValid(inFlow);
+    posIn = deltaInFlow > 0;
+    negIn = deltaInFlow <= 0;        
+    deltaZ(ixIn(negIn)) = 0.1;
+    deltaZ(ixIn(posIn)) = deltaInFlow(posIn);
+    
+    % Perform derivative/slope scaling
     alpha = deltaZ ./ deltaX;
     flux = flux .* alpha;
+    
 end
