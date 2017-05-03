@@ -23,4 +23,3 @@ CG.faceLength = stepSize;
 CG.spillPoints = spillPoints;
 
 end
-
