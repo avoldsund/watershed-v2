@@ -1,4 +1,4 @@
-function [allCellFaces, allFaceNormals, allNbrs, nbrPairs, signs] = flipAllNormals(CG)
+function [allCellIndices, allCellFaces, allFaceNormals, allNbrs, nbrPairs, signs] = flipAllNormals(CG)
     %FLIPALLNORMALS returns all cell faces, all face normals flipped
     %outwards and the signs: -1 if flipped, 1 if not
     %   [ALLCELLFACES, ALLFACENORMALS, SIGN] = FLIPALLNORMALS(CG) takes a
@@ -24,4 +24,3 @@ signs = 1 - 2 * nbrs;
 allFaceNormals(signs == -1, :) = -allFaceNormals(signs == -1, :);
 
 end
-
