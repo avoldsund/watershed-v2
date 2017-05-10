@@ -8,6 +8,7 @@ G = computeGeometry(G);
 
 % Combine traps and coarsen gridnrOfTraps
 partition = [1,2,3,4,5,6,25,7,25,8,9,25,10,25,11,12,25,13,25,14,15,16,25,17,18, 19,20,21,22,23]';
+%partition = [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,27,17,27,18,19,20,27,20,21,22,23,24,25,26]';
 partition = compressPartition(partition);
 CG = generateCoarseGrid(G, partition);
 CG = coarsenGeometry(CG);
@@ -32,7 +33,7 @@ set(tcg,'BackgroundColor','w','EdgeColor','none');
 colormap(.5*jet+.5*ones(size(jet)));
 
 %% Show face indices of fine/coarse grids
-delete([tg; tcg]);
+%delete([tg; tcg]);
 tg = text(CG.parent.faces.centroids(:,1), CG.parent.faces.centroids(:,2), ...
    num2str((1:CG.parent.faces.num)'),'FontSize',7, 'HorizontalAlignment','center');
 tcg = text(CG.faces.centroids(:,1), CG.faces.centroids(:,2), ...
