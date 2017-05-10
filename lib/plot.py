@@ -243,19 +243,26 @@ def plot_flow_directions(flow_directions):
     """
 
     flow_directions = flow_directions.astype(int)
-    (r, c) = np.shape(flow_directions)
-    N = 9
-    plt.matshow(flow_directions, cmap=discrete_cmap(N, "RdBu_r"))
-    plt.grid(False)
-    cb = plt.colorbar(ticks=[-1, 0, 1, 2, 3, 4, 5, 6, 7], )
-    cb.set_ticklabels(['N/A', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW', 'N'])
-    cb.ax.tick_params(labelsize=20)
-    plt.clim(-1.5, 7.5)
+    # Convert matrix to -1 to 7 format (in contrast to -1 to 128)
+    neg_indices = np.where(flow_directions < 0)
+    flow_directions = np.log2(flow_directions)
+    flow_directions[neg_indices] = -1
 
-    x_ticks = np.arange(0, c, 500)
-    y_ticks = np.arange(3998, 0, -500)
-    plt.xticks(x_ticks, [])
-    plt.yticks(y_ticks, [])
+    plt.figure(figsize=(15, 15))
+    #(r, c) = np.shape(flow_directions)
+    N = 9
+    plt.matshow(flow_directions, cmap=discrete_cmap(N, "RdBu_r"), fignum=1)
+    plt.grid(False)
+    cb = plt.colorbar(fraction=0.046, pad=0.04, ticks=[-1, 0, 1, 2, 3, 4, 5, 6, 7])
+    cb.set_ticklabels(['N/A', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW', 'N'])
+    cb.ax.tick_params(labelsize=40)
+    plt.clim(-1.5, 7.5)
+    plt.axis('off')
+    plt.savefig('flowDir.png', format='png', dpi=300, bbox_inches='tight')
+    #x_ticks = np.arange(0, c, 500)
+    #y_ticks = np.arange(3998, 0, -500)
+    #plt.xticks(x_ticks, [])
+    #plt.yticks(y_ticks, [])
 
     plt.show()
 
@@ -507,7 +514,8 @@ def plot_traps(watersheds, traps, threshold, landscape, ds):
         row_col = util.map_1d_to_2d(ws, landscape.nx)
         plt.scatter(landscape.x_min + row_col[1][0::ds] * landscape.step_size,
                     landscape.y_max - row_col[0][0::ds] * landscape.step_size,
-                    color=next(color_small), s=2, lw=0, alpha=1)
+                    color=color_hex[0], s=2, lw=0, alpha=1)
+                    # color=next(color_small), s=2, lw=0, alpha=1)
 
     # Plot all traps
     for i in range(len(traps)):
@@ -515,18 +523,18 @@ def plot_traps(watersheds, traps, threshold, landscape, ds):
         row_col = util.map_1d_to_2d(trap, landscape.nx)
         plt.scatter(landscape.x_min + row_col[1][0::ds] * landscape.step_size,
                     landscape.y_max - row_col[0][0::ds] * landscape.step_size,
-                    color='gold', s=2, lw=0, alpha=1)
+                    color='gold', s=20, lw=0, alpha=1)
 
-    # Plot the boundary nodes
-    boundary_pairs = util.get_boundary_pairs_in_watersheds(watersheds, landscape.nx, landscape.ny)
-
-    for i in range(nr_of_watersheds):
-        b_p = boundary_pairs[i]
-        u = np.unique(np.concatenate((b_p[0], b_p[1])))
-        row_col = util.map_1d_to_2d(u, landscape.nx)
-        plt.scatter(landscape.x_min + row_col[1][0::ds] * landscape.step_size,
-                    landscape.y_max - row_col[0][0::ds] * landscape.step_size,
-                    color='black', s=2, lw=0, alpha=1)
+    ## Plot the boundary nodes
+    #boundary_pairs = util.get_boundary_pairs_in_watersheds(watersheds, landscape.nx, landscape.ny, False)
+    #
+    #for i in range(nr_of_watersheds):
+    #    b_p = boundary_pairs[i]
+    #    u = np.unique(np.concatenate((b_p[0], b_p[1])))
+    #    row_col = util.map_1d_to_2d(u, landscape.nx)
+    #    plt.scatter(landscape.x_min + row_col[1][0::ds] * landscape.step_size,
+    #                landscape.y_max - row_col[0][0::ds] * landscape.step_size,
+    #                color='black', s=2, lw=0, alpha=1)
 
     plt.title('The traps of the watersheds with over %s cells in the landscape' % str(threshold))
     font = {'family': 'normal',
@@ -587,7 +595,7 @@ def plot_hillshade(heights):
 
 def plot_accumulated_flow_above_threshold(acc_flow):
 
-    threshold = 1000
+    threshold = 100000
     river_nodes = np.where(acc_flow > threshold)
 
     plt.scatter(river_nodes[1] * 10, river_nodes[0] * 10, color='black', s=2, lw=0, alpha=1)
@@ -597,15 +605,25 @@ def plot_accumulated_flow_above_threshold(acc_flow):
 
 def plot_accumulated_flow(acc_flow):
 
-    #rows, cols = np.shape(acc_flow)
+    rows, cols = np.shape(acc_flow)
     # threshold = rows * cols * 0.01
-    #river_nodes = np.where(acc_flow > threshold)
-    threshold = 100000
-    river_nodes = np.where(acc_flow > threshold)
-    acc_flow[river_nodes] = threshold
-    plt.imshow(acc_flow, cmap='RdBu_r')
-    plt.colorbar()
+    threshold = 50000
+    chosen_nodes = np.where(acc_flow > threshold)
+    remove_nodes = np.where(acc_flow <= threshold)
+    acc_flow[chosen_nodes] = threshold
+    acc_flow[remove_nodes] = 0
+    fig = plt.figure()
+    ax = fig.gca()
+    fig.tight_layout()
+    ax.axis('off')
+    plt.imshow(acc_flow, cmap='Blues')
+    #plt.colorbar()
+
+    plt.savefig("/home/anderovo/Dropbox/masters-thesis/thesis/flowAccumulation.png", dpi=300, bbox_inches='tight',
+                pad_inches=0)
+
     plt.show()
+
     # plt.scatter(river_nodes[1] * 10, river_nodes[0] * 10, color='black', s=2, lw=0, alpha=1)
     # plt.gca().invert_yaxis()
     # plt.show()
@@ -694,3 +712,15 @@ def discrete_matshow(data):
     # cax.ax.tick_params(labelsize=22)
 
     # cax.set_ticklabels(['Not in watershed', 'In watershed'], update_ticks=True)
+
+
+def plot_heights(heights):
+
+    plt.figure(figsize=(15, 15))
+    plt.matshow(heights[1:-1, 1:-1], cmap='terrain', fignum=1)
+    cb = plt.colorbar(fraction=0.046, pad=0.04)
+    cb.ax.tick_params(labelsize=40)
+    plt.axis('off')
+
+    plt.savefig('heightsRegular.png', format='png', dpi=300, bbox_inches='tight')
+    plt.show()
