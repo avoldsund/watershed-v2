@@ -5,7 +5,7 @@ function [CG, tof] = calculateTof(phi, scaleFluxes)
 % height, add that cell to the trap
 
 % Load data
-l = load('landscapeXXL.mat');
+l = load('landscapeTyrifjordenWatershed.mat');
 watershed = l.watershed; 
 outlet = l.outlet; 
 faceLength = double(l.stepSize);
@@ -32,7 +32,7 @@ state = struct('flux', flux);
 rock = util.setPorosity(CG, nrOfTraps, phi);
 
 % Calculate time-of-flight and subtract time it takes to fill src
-maxTime = 10^9;
+maxTime = 10^8;
 tof = computeTimeOfFlight(state, CG, rock, 'src', src, ...
    'maxTOF', maxTime, 'reverse', true, 'processCycles', true);
 tof = tof - min(tof);

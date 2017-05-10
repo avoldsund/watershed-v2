@@ -1,11 +1,11 @@
 %% Calculate hydrograph for a precipitation scenario in a DEM landscape
 
-N = 500;
+N = 100;
 [CG, tof] = calculateTofRegularGrid(N);
 tof = ceil(tof);
 showTofCentroids = false;
 cellIndices = false;
-%f = plot.tof(CG, tof, showTofCentroids, cellIndices);
+f = plot.tof(CG, tof, showTofCentroids, cellIndices);
 
 %% Make disc hydrograph
  

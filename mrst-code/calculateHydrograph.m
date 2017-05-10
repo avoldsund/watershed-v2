@@ -1,31 +1,43 @@
 %% Calculate hydrograph for a precipitation scenario in a DEM landscape
 
-phi = 0.1;
+% If it doesn't work properly, change src in util.getSource
+
+phi = 10^-7;
 scaleFluxes = true;
 [CG, tof] = calculateTof(phi, scaleFluxes);
 tof = ceil(tof);
 showTofCentroids = false;
 cellIndices = false;
-f = plot.tof(CG, tof, showTofCentroids, cellIndices);
+%f = plot.tof(CG, tof, showTofCentroids, cellIndices);
 
+
+%% Remove largest value
+maxTof = max(tof);
+maxIndices = find(tof == maxTof);
+tof(maxIndices) = 0;
+newMax = max(tof);
+tof(maxIndices) = newMax;
 
 %% Uniform hydrograph
 
 A = 10; % mm/hour
-duration = 3600; % seconds
-discharge = util.hydrographUniform(CG, tof, A, duration);
+duration = 36000; % seconds
+discharge = util.hydrographUniformFast(CG, tof, A, duration);
 
 saveName = strcat('uH', 'P', int2str(A), 'D', int2str(duration));
 saveName = strcat(saveName, '.eps');
 
 h = plot.hydrograph(discharge, saveName);
-export_fig(saveName, h, '-eps')
+%export_fig(saveName, h, '-eps')
 
 %% Make moving front
 
+%rIx = find(tof == max(tof));
+%tof(rIx) = 0;
+
 % Define movement
-d = [0, 1]; % No need to normalize
-frontSize = 10;
+d = [0, -1]; % No need to normalize
+frontSize = 1000;
 offset = frontSize / 2;
 
 minCoord = min(CG.faces.centroids);
@@ -68,9 +80,9 @@ end
 corners = [cornersX; cornersY]';
 
 intensity = 10; % mm/hour
-v = 5; % m/s
+v = 1; % m/s
 gaussian = true;
-maxTime = 650;
+maxTime = 1000000;
 
 front = struct('amplitude', intensity,...
                'velocity', v,...
@@ -80,12 +92,12 @@ front = struct('amplitude', intensity,...
                'corners', corners,...
                'gaussian', gaussian);
 
-discharge = util.hydrographMovingFront(CG, tof, front, maxTime, f);
+discharge = util.hydrographMovingFront(CG, tof, front, maxTime)%;, f);
 
-saveName = strcat('frontHydrograph', 'I', num2str(intensity), 'v', num2str(v), 'D', strcat(int2str(d(1)), int2str(d(2))));
+saveName = 'frontSouth.eps';
 
 h = plot.hydrograph(discharge, maxTime);
-export_fig(saveName, h, '-eps')
+%export_fig(saveName, h, '-eps')
 
 
 %% Make disc hydrograph

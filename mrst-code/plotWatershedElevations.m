@@ -1,7 +1,15 @@
 % Load necessary data and compute geometry
 figure()
-load('watershed.mat');
-load('heights.mat');
+l = load('landscape2kMergedTraps.mat');
+watershed = l.watershed; 
+outlet = l.outlet; 
+faceLength = double(l.stepSize);
+heights = l.heights;
+traps = l.traps;
+nrOfTraps = l.nrOfTraps;
+trapHeights = l.trapHeights;
+flowDirections = l.flowDirections;
+spillPairs = l.spillPairs;
 [nRows, nCols] = size(heights);
 
 heights = rot90(heights, -1);
