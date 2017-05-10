@@ -12,7 +12,7 @@ file_name = '/home/anderovo/Dropbox/watershedLargeFiles/anders_hoh.tiff'
 # Load all necessary data
 landscape = pickle.load(open(saved_files + 'landscapeTyrifjorden.pkl', 'rb'))
 watersheds = pickle.load(open(saved_files + 'watershedsTyrifjorden.pkl', 'rb'))
-flow_directions = pickle.load(open(saved_files + 'flowDirTyrifjorden.pkl', 'rb'))
+flow_directions = pickle.load(open(saved_files + 'flowDirectionsTyrifjorden.pkl', 'rb'))
 conn_matrix = pickle.load(open(saved_files + 'connMatTyrifjorden.pkl', 'rb'))
 traps = pickle.load(open(saved_files + 'trapsTyrifjorden.pkl', 'rb'))
 steepest_spill_pairs = pickle.load(open(saved_files + 'steepestTyrifjorden.pkl', 'rb'))
@@ -21,7 +21,8 @@ size_of_traps = pickle.load(open(saved_files + 'sizeOfTrapsTyrifjorden.pkl', 'rb
 
 # Get watershed of desired watershed outlet outlet_coords_r_c
 step_size = 10
-outlet_coords_r_c = (3269, 1041)
+# outlet_coords_r_c = (3269, 1041)
+outlet_coords_r_c = (3980, 534)
 ws_of_node, trap_indices_in_ws = river_analysis.get_watershed_of_node(outlet_coords_r_c, conn_matrix, traps, landscape.ny, landscape.nx)
 
 # Pre-process data
@@ -33,4 +34,4 @@ heights, ws, traps_in_ws, trap_heights, total_trap_cells, nr_of_traps, nr_of_cel
 scipy.io.savemat('landscape.mat', dict(watershed=ws, outlet=outlet_coords_r_c, stepSize=step_size, heights=heights,
                                        traps=traps_in_ws, totalTrapCells=total_trap_cells, nrOfTraps=nr_of_traps,
                                        nrOfCellsInEachTrap=nr_of_cells_in_each_trap, trapHeights=trap_heights,
-                                       spillPairs=steepest_spill_pairs, flowDirections=flow_directions))
+                                       spillPairs=spill_pairs, flowDirections=flow_directions))
