@@ -492,14 +492,33 @@ def get_watershed_of_node(node_coords_r_c, expanded_conn_mat, traps, r, c):
 
 
 def calculate_watershed_of_node(landscape, outlet_coords_r_c, d4):
+    """
+    Calculate the watershed for an outlet point in the landscape
+    :param landscape: Landscape object
+    :param outlet_coords_r_c: (r, c)-coordinates of outlet
+    :param d4: If D4 is used or not. Default is D8.
+    :return ws_of_node: Indices of the outlet's watershed
+    :return traps: All traps
+    :return spill_heights: Spill heights of traps
+    :return trap_nodes_in_ws: Indices of traps that belong to watershed
+    :return steepest: The steepest spill pairs for traps
+    :return flow_dir: Flow directions
+    :return landscape.heights: Heights of depressionless landscape
 
+    """
     landscape.heights = util.fill_single_cell_depressions(landscape.heights, landscape.ny, landscape.nx)
+    watersheds, steepest, flow_dir = util.calculate_watersheds(landscape.heights, landscape.nx, landscape.ny, landscape.step_size, d4)
+    # spill_heights = util.get_spill_heights(watersheds, landscape.heights, steepest)
+    # traps, size_of_traps = util.get_all_traps(watersheds, landscape.heights, spill_heights)
+
+    # Increase heights of traps and recalculate flow. Remove flow from some indices in traps.
+    util.make_landscape_depressionless(watersheds, steepest, landscape)
+    print 'Made landscape depressionless'
+    # Test if traps are merged
     watersheds, steepest, flow_dir = util.calculate_watersheds(landscape.heights, landscape.nx, landscape.ny, landscape.step_size, d4)
     spill_heights = util.get_spill_heights(watersheds, landscape.heights, steepest)
     traps, size_of_traps = util.get_all_traps(watersheds, landscape.heights, spill_heights)
 
-    # Increase heights of traps and recalculate flow. Remove flow from some indices in traps.
-    util.make_landscape_depressionless(watersheds, steepest, landscape)
     flow = util.get_flow_direction_indices(landscape.heights, landscape.step_size, landscape.ny, landscape.nx, d4)
     flow_dir = util.get_flow_directions(landscape.heights, landscape.step_size, landscape.ny, landscape.nx, d4)
 
@@ -519,16 +538,121 @@ def calculate_watershed_of_node(landscape, outlet_coords_r_c, d4):
     return ws_of_node, traps, spill_heights, trap_nodes_in_ws, steepest, flow_dir, landscape.heights
 
 
+def calculate_all_data(landscape, d4):
+    """
+    Method to retrieve all necessary information for the entire landscape, which applies to all outlets
+    :param landscape: Landscape object
+    :param d4: If D4 method shall be used. Default is D8.
+    :return landscape: Landscape object
+    :return watersheds: All watersheds in landscape
+    :return steepest: All steepest spill pairs
+    :return flow_dir: Flow directions (-1, 1, 2, 4, 8, 16, 32, 64, 128)
+    :return spill_heights: Heights traps spill over at
+    :return traps: All traps in landscape
+    :return size_of_traps: Size of each trap
+    :return expanded_conn_mat: Connectivity matrix between nodes and trap nodes
+    """
+
+    # Make landscape depressionless
+    landscape.heights = util.fill_single_cell_depressions(landscape.heights, landscape.ny, landscape.nx)
+    watersheds, steepest, flow_dir = util.calculate_watersheds(landscape.heights, landscape.nx, landscape.ny, landscape.step_size, d4)
+    util.make_landscape_depressionless(watersheds, steepest, landscape)
+    print 'Done making depressionless landscape'
+
+    # Calculate for depressionless landscape
+    watersheds, steepest, flow_direction_indices = util.calculate_watersheds(landscape.heights, landscape.nx, landscape.ny,
+                                                               landscape.step_size, d4)
+    spill_heights = util.get_spill_heights(watersheds, landscape.heights, steepest)
+    traps, size_of_traps = util.get_all_traps(watersheds, landscape.heights, spill_heights)
+    print 'Done calculating new watersheds etc.'
+
+    flow_directions = util.get_flow_directions(landscape.heights, landscape.step_size, landscape.ny, landscape.nx, d4)
+
+    # Make sure that flow directions of traps are -1
+    for i in range(len(traps)):
+        trap_in_2d = util.map_1d_to_2d(traps[i], landscape.nx)
+        flow_direction_indices[trap_in_2d] = -1
+        flow_directions[trap_in_2d] = -1
+
+    # Create connections and expand matrix to accommodate trap nodes
+    node_conn_mat = util.make_sparse_node_conn_matrix(flow_direction_indices, landscape.ny, landscape.nx)
+    node_conn_mat = expand_conn_mat(node_conn_mat, len(traps))
+    expanded_conn_mat = reroute_trap_connections(node_conn_mat, landscape.ny, landscape.nx, traps, steepest, d4)
+    print 'Done connectivity matrix'
+
+    return landscape, watersheds, steepest, flow_directions, spill_heights, traps, size_of_traps, expanded_conn_mat
+
+
+def pre_process_export_data(landscape, ws_of_node, traps, trap_indices_in_ws, trap_heights, flow_directions, steepest_spill_pairs):
+    """
+    Pre-process all export data that is going into Matlab
+    :param landscape: Landscape object
+    :param ws_of_node: Ws of an outlet
+    :param traps: All traps in landscape
+    :param trap_indices_in_ws: Indices of the traps in watershed ws
+    :param trap_heights: All trap heights
+    :param flow_directions: Flow directions of entire landscape
+    :param steepest_spill_pairs: All spill pairs of the traps
+    :return heights: Heights of landscape
+    :return ws: Watershed of selected outlet
+    :return traps_in_ws: Traps in this particular watershed
+    :return trap_heights: Trap heights in traps
+    :return total_trap_cells: All trap cells in watershed
+    :return nr_of_traps: Nr of traps in this watershed
+    :return nr_of_cells_in_each_trap: Nr of cells in each trap
+    :return flow_directions: Flow directions of entire landscape
+    :return spill_pairs: Spill pairs in this watershed
+    """
+    # Pre-process output data
+
+    # Only select traps in ws
+    nr_of_cells_in_each_trap = [len(traps[i]) for i in trap_indices_in_ws]
+    total_trap_cells = np.sum(nr_of_cells_in_each_trap)
+    traps = [util.map_1d_to_2d(traps[i], landscape.nx) for i in trap_indices_in_ws]
+    nr_of_traps = len(traps)
+    trap_heights = [trap_heights[t] for t in trap_indices_in_ws]
+
+    # Map watershed to 2d
+    ws = util.map_1d_to_2d(ws_of_node, landscape.nx)
+
+    # Alter flow directions in traps, and create wrapping around it
+    flow_directions = add_trap_flow_directions(flow_directions, steepest_spill_pairs)
+    zero_wrapping = np.zeros((landscape.ny, landscape.nx), dtype=int)
+    zero_wrapping[1:-1, 1:-1] = flow_directions[1:-1, 1:-1]
+    flow_directions = zero_wrapping
+
+    # Map steepest_spill_pairs to 2d
+    steepest_spill_pairs = [util.map_1d_to_2d(steepest_spill_pairs[i][0], landscape.nx) for i in
+                            range(len(steepest_spill_pairs)) if i in trap_indices_in_ws]
+
+    # Create cell array structure for traps
+    traps_in_ws = np.zeros((len(traps), 2), dtype=object)
+    for i in range(len(traps)):
+        traps_in_ws[i][0] = traps[i][0]
+        traps_in_ws[i][1] = traps[i][1]
+
+    # The matrix is transposed if the type is masked array, so we use np.asarray to fix this!
+    heights = np.asarray(landscape.heights)
+
+    return heights, ws, traps_in_ws, trap_heights, total_trap_cells, nr_of_traps, nr_of_cells_in_each_trap, \
+           flow_directions, steepest_spill_pairs
+
+
 def calculate_accumulated_flow(landscape, d4):
 
     landscape.heights = util.fill_single_cell_depressions(landscape.heights, landscape.ny, landscape.nx)
     watersheds, steepest, flow_dir = util.calculate_watersheds(landscape.heights, landscape.nx, landscape.ny,
                                                                landscape.step_size, d4)
+
+    # Make change to merge traps
+    util.make_landscape_depressionless(watersheds, steepest, landscape)
+    print 'Made landscape depressionless'
+
+    watersheds, steepest, flow_dir = util.calculate_watersheds(landscape.heights, landscape.nx, landscape.ny,
+                                                               landscape.step_size, d4)
     spill_heights = util.get_spill_heights(watersheds, landscape.heights, steepest)
     traps, size_of_traps = util.get_all_traps(watersheds, landscape.heights, spill_heights)
 
-    # Increase heights of traps and recalculate flow. Remove flow from some indices in traps.
-    util.make_landscape_depressionless(watersheds, steepest, landscape)
     flow = util.get_flow_direction_indices(landscape.heights, landscape.step_size, landscape.ny, landscape.nx, d4)
     for i in range(len(traps)):
         trap_in_2d = util.map_1d_to_2d(traps[i], landscape.nx)
