@@ -5,14 +5,13 @@ function discharge = hydrographUniform(CG, tof, amount, duration)
 %   discharge over time given the time-of-flight TOF, the intensity of the
 %   precipitation INTENSITY and the time it lasts DURATION.
 
-% Iterate over time
-totalTime = max(tof) + duration + 1;
-
+finalTime = max(tof) + duration + 1;
 duration = ones(CG.cells.num, 1) .* duration;
 amount = ones(CG.cells.num, 1) .* amount .* CG.cells.volumes;
-discharge = zeros(totalTime, 1);
+discharge = zeros(finalTime, 1);
 
-for time = 0:totalTime
+for time = 0:finalTime
+
     % Cells contributing to flow between time [i, i+1)
     contributingCells = tof <= time & tof + duration > time;
     

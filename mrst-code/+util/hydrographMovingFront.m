@@ -1,4 +1,4 @@
-function discharge = hydrographMovingFront(CG, tof, front, maxTime, f)
+function discharge = hydrographMovingFront(CG, tof, front, maxTime)%, f)
 %CALCULATEHYDROGRAPH Calculate the discharge at the outlet given a moving
 %front of precipitation.
 %   DISCHARGE = HYDROGRAPHMOVINGFRONT(CG, TOF, FRONT, MAXTIME) returns the 
@@ -7,20 +7,20 @@ function discharge = hydrographMovingFront(CG, tof, front, maxTime, f)
 %   structure CG. The last parameter MAXTIME describes the time interval
 %   [0, MAXTIME] of the resulting hydrograph.
 
-cellArea = 100;
+cellArea = CG.faceLength * CG.faceLength;
 flow = false;
 in = true;
 t = 1;
 
 while any(in) == 1 & t < maxTime
-
+    t
     [flow, in] = getDischarge(CG, tof, flow, front, maxTime, cellArea, t);
 
-    hold on
-    plot([front.corners(:, 1); front.corners(1, 1)], [front.corners(:, 2); front.corners(1, 2)], 'b-', 'Linewidth', 4);
-    cellCent = CG.parent.cells.centroids;
-    centroidsInside = cellCent(in, :);
-    plot(centroidsInside(:, 1), centroidsInside(:, 2), 'b*', 'MarkerSize', 24, 'LineWidth', 4);
+%     hold on
+%     plot([front.corners(:, 1); front.corners(1, 1)], [front.corners(:, 2); front.corners(1, 2)], 'b-', 'Linewidth', 4);
+%     cellCent = CG.parent.cells.centroids;
+%     centroidsInside = cellCent(in, :);
+%     plot(centroidsInside(:, 1), centroidsInside(:, 2), 'b*', 'MarkerSize', 24, 'LineWidth', 4);
     front = moveFront(front);
     t = t + 1;
 end
