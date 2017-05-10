@@ -10,25 +10,29 @@ function faceFlowDirections = fixDiagonalFlowFromTrap(CG, spFaces, trapCellIx, f
 
 % Get neighbors of the two faces
 nbrs = CG.faces.neighbors(spFaces, :);
-notTraps = nbrs ~= trapCellIx;
-faceNbrs = nbrs(notTraps);
+nbrs = nbrs(nbrs ~= trapCellIx);
 
 % If any of the neighbors are at the boundary, return
-if any(faceNbrs == 0)
+if any(nbrs == 0)
     return
 end
 
-for ix = 1:2
-    % Find outflow faces from the two neighbors
-    [faces, nrmls] = util.flipNormalsOutwards(CG, faceNbrs(ix));
-    dp = sum(bsxfun(@times, nrmls, CG.cells.fd(faceNbrs(ix), :)), 2);
+% The trap spills diagonally to two cells, over faces spFaces
+for ix = 1:size(spFaces, 2)
+    % Find outflow faces from the neighbor
+    [faces, nrmls] = util.flipNormalsOutwards(CG, nbrs(ix));
+    dp = sum(bsxfun(@times, nrmls, CG.cells.fd(nbrs(ix), :)), 2);
     posIndices = find(dp > 0);
 
-    % If the only outflow face is similar to the incoming diagonal, change fd
-    % of nbrCell
+    % If one of the faces the neighbor has flow out of is the incoming 
+    % diagonal (spill face), we change the flow direction of the neighbor's
+    % faces. This is to avoid a potential zero flow over the edge.
+    % NB: Remember to multiply by sqrt(2) to get a new normalized fd.
     if faces(posIndices) == spFaces(1, ix)
-        newFlowDir =  CG.cells.fd(trapCellIx, :) + CG.cells.fd(faceNbrs(ix), :);
-        faceIndices = CG.cells.facePos(faceNbrs(ix)):CG.cells.facePos(faceNbrs(ix) + 1) - 1;    
+        %newFlowDir =  CG.cells.fd(trapCellIx, :) .* sqrt(2) + CG.cells.fd(nbrs(ix), :);
+        newFlowDir =  CG.cells.fd(trapCellIx, :);
+        %assert(sqrt(newFlowDir(1)^2+newFlowDir(2)^2) == 1)
+        faceIndices = CG.cells.facePos(nbrs(ix)):CG.cells.facePos(nbrs(ix) + 1) - 1;    
         faceFlowDirections(faceIndices, :) = rldecode(newFlowDir, size(faceIndices, 2));
     end
 end
