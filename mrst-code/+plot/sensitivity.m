@@ -1,34 +1,47 @@
-function s = sensitivity(CG, tof)
-    %SENSITIVITY Summary of this function goes here
-    %   Detailed explanation goes here
-
-    scale = 255;
-    blueBrewer = [140, 160, 203] ./ scale;
-    greenBrewer = [102, 194, 165] ./ scale;
-    orangeBrewer = [252, 141, 98] ./ scale;
+function [s, f, cbar] = sensitivity(CG, tof, numBins)
+    %SENSITIVITY divides the time-of-flights in N time intervals and plots a
+    %plots each interval in a separate color. A histogram is also created.
+    %   [S, F, CBAR] = SENSITIVITY(CG, TOF, NUMBINS) creates a bar plot
+    %   showing how the area is divided in terms of time-of-flight. The
+    %   time intervals in the bar plot is used as basis for a
+    %   time-of-flight plots where each bin has its own color.
     
-    h = histogram(tof, 10);
+    tofNew = tof / 3600;
+    
+    % Plot histogram using cell areas/bar plot
     s = figure('position', [0, 0, 1000, 1000]);
     figure(s);
-
-    cmap = jet(h.NumBins);
+    axH = axes('parent', s);
+    hold(axH, 'on')
+    [~, binEdges, binIndices] = histcounts(tofNew, 15);
     
-    for i = 1:h.NumBins
-        ix = tof >= h.BinEdges(i) & tof < h.BinEdges(i+1);
-        plotGrid(CG, ix, 'faceColor', cmap(i, :));
+    barAreas = zeros(numBins, 1);
+    cmap = jet(numBins);
+    colorIndices = binIndices;
+    labels = {};
+    for i = 1:numBins
+        barAreas(i) = sum(CG.cells.volumes(binIndices == i));
+        labels{i} =  strcat('[', num2str(binEdges(i)), ':', num2str(binEdges(i+1)), ')');
+        bar(i, barAreas(i), 'parent', axH, 'facecolor', cmap(i, :));
     end
+    
+    xlim([0.6, numBins + 0.4])
+    set(gca, 'XTickLabel', '', 'fontsize', 24);
+    xlabel('Time intervals');
+    ylabel('Total area (m^2)');
+    
+    % Plot time-of-flights using the histogram bins
+    f = figure('position', [0, 0, 1000, 1000]);
+    figure(f);
+    plotCellData(CG, colorIndices, 'EdgeColor', 'None'); 
+    colormap(cmap);
     axis('off')
     
-    %colorIndices(ix) = 1;
-    %colorIndices(ix2) = 2;
-    %colors = zeros(3, 3);
-    %colors(1, :) = greenBrewer;
-    %colors(2, :) = blueBrewer;
-    %colors(3, :) = orangeBrewer;
-    %plotGrid(CG, find(colorIndices == 0), 'faceColor', colors(1, :));
-    %plotGrid(CG, find(colorIndices == 2), 'faceColor', colors(2, :));
-    %plotGrid(CG, find(colorIndices == 2), 'faceColor', colors(3, :));
-
-    %plotCellData(CG, tof, 'EdgeColor', 'None');
-    %plotGrid(CG, 'FaceColor', 'None', 'EdgeColor', 'None')
+    labels = binEdges;
+    ytick = 1 : (numBins - 1) / numBins : numBins;
+    cbar = colorbar('YTickLabel', labels, 'YTick', ytick, 'YLim', [1 numBins],...
+        'fontsize', 20);
+    ylabel(cbar, 'Time-of-flight in hours', 'fontSize', 20);
+    daspect([1 1 1])
+    
 end

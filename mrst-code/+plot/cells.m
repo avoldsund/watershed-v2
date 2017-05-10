@@ -4,8 +4,6 @@ function [] = cells(CG)
 %   CELLS(CG) plots CG as both cell indices and faces, and the cells and
 %   the trap cells in the grid.
 
-t = load('traps.mat'); nrOfTraps = t.nrOfTraps;
-
 phi = 1;
 scaleFluxes = true;
 [CG, ~] = calculateTof(phi, scaleFluxes);

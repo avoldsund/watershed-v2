@@ -12,21 +12,22 @@ colors = [greenLight; greenDark];
 
 %colorsBW = [white; grey];
 x = [0, scale];
-map = interp1(x/scale, colors, linspace(0, 1, scale));
+%map = interp1(x/scale, colors, linspace(0, 1, scale));
 
 % Create figure, set colormap, plot grid and face colors
 f = figure('position', [100, 100, 1000, 1000]);
 
 % Add frame/invisible line to front
-color = [0.99, 0.99, 0.99];
+%color = [0.99, 0.99, 0.99];
 % plot([10, 10, 50, 50, 10], [5, 55, 55, 5, 5], 'Color', color)
 
 % Add frame/invisible line to disc
-plot([0, 0, 60, 60, 0], [0, 60, 60, 0, 0], 'Color', color)
+%plot([0, 0, 60, 60, 0], [0, 60, 60, 0, 0], 'Color', color)
 
-colormap(map);
+colormap(jet)
+%colormap(map);
 plotCellData(CG, tof, 'EdgeColor', 'None');
-plotGrid(CG, 'FaceColor', 'None')
+plotGrid(CG, 'FaceColor', 'None', 'EdgeColor', 'None')
 
 % Add colorbar, remove axis
 %h = colorbar;
@@ -34,7 +35,7 @@ plotGrid(CG, 'FaceColor', 'None')
 %caxis([0, 2330]);
 axis off
 
-% Set tof-values
+
 if cellIndices
     textCells = text(CG.cells.centroids(:,1), CG.cells.centroids(:,2), ...
        num2str((1:CG.cells.num)'),'FontSize',24, 'HorizontalAlignment','center');
