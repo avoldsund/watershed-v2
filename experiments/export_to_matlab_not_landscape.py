@@ -38,11 +38,18 @@ heights_three_traps_div = np.array([[10, 10, 10, 10, 10, 10],
                                     [10, 4, 4, 4, 4.5, 10],
                                     [10, 4, 10, 10, 10, 10]])
 
-print heights_three_traps_div
+heights_trap_t = np.array([[3, 3, 3, 3, 3, 3, 3],
+                         [3, 2, 2, 2, 0, 2, 2],
+                         [3, 2, 2, 2, 0, 2, 2],
+                         [3, 3, 3, 3, 3, 3, 3]])
 
+# heights_trap_t = np.rot90(heights_trap_t)
+# print heights_trap_t
 outlet = (4, 1)
 step_size = 10
 ny, nx = np.shape(heights_three_traps_div)
+print 'ny', ny
+print 'nx', nx
 
 ws_of_node, traps, trap_heights, trap_indices_in_ws, steepest_spill_pairs, flow_directions, heights = river_analysis.\
     calculate_watershed_of_node_no_landscape_input(heights_three_traps_div, nx, ny, step_size, outlet, d4=False)
@@ -89,10 +96,15 @@ for i in range(len(traps)):
     new_traps[i][0] = traps[i][0]
     new_traps[i][1] = traps[i][1]
 
-scipy.io.savemat('watershed.mat', dict(watershed=ws, outlet=outlet))
-scipy.io.savemat('heights.mat', dict(heights=heights))
-scipy.io.savemat('traps.mat', dict(traps=new_traps, totalTrapCells=total_trap_cells,
-                                   nrOfTraps=nr_of_traps, nrOfCellsInEachTrap=nr_of_cells_in_each_trap,
-                                   trapHeights=trap_heights))
-scipy.io.savemat('steepest.mat', dict(spillPairs=steepest_spill_pairs))
-scipy.io.savemat('flowDirections.mat', dict(flowDirections=flow_directions))
+# scipy.io.savemat('watershed.mat', dict(watershed=ws, outlet=outlet, stepSize=step_size))
+# scipy.io.savemat('heights.mat', dict(heights=heights))
+# scipy.io.savemat('traps.mat', dict(traps=new_traps, totalTrapCells=total_trap_cells,
+#                                    nrOfTraps=nr_of_traps, nrOfCellsInEachTrap=nr_of_cells_in_each_trap,
+#                                    trapHeights=trap_heights))
+# scipy.io.savemat('steepest.mat', dict(spillPairs=steepest_spill_pairs))
+# scipy.io.savemat('flowDirections.mat', dict(flowDirections=flow_directions))
+
+scipy.io.savemat('landscape.mat', dict(watershed=ws, outlet=outlet, stepSize=step_size, heights=heights,
+                                       traps=new_traps, totalTrapCells=total_trap_cells, nrOfTraps=nr_of_traps,
+                                       nrOfCellsInEachTrap=nr_of_cells_in_each_trap, trapHeights=trap_heights,
+                                       spillPairs=steepest_spill_pairs, flowDirections=flow_directions))
