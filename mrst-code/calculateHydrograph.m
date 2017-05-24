@@ -2,7 +2,7 @@
 
 % If it doesn't work properly, change src in util.getSource
 
-phi = 10^-7;
+phi = 10^-3;
 scaleFluxes = true;
 [CG, tof] = calculateTof(phi, scaleFluxes);
 tof = ceil(tof);
@@ -36,8 +36,8 @@ h = plot.hydrograph(discharge, saveName);
 %tof(rIx) = 0;
 
 % Define movement
-d = [0, -1]; % No need to normalize
-frontSize = 1000;
+d = [-1, 0]; % No need to normalize
+frontSize = 10000;
 offset = frontSize / 2;
 
 minCoord = min(CG.faces.centroids);
@@ -80,9 +80,9 @@ end
 corners = [cornersX; cornersY]';
 
 intensity = 10; % mm/hour
-v = 1; % m/s
+v = 12.5; % m/s
 gaussian = true;
-maxTime = 1000000;
+maxTime = 1E6;
 
 front = struct('amplitude', intensity,...
                'velocity', v,...
@@ -92,13 +92,18 @@ front = struct('amplitude', intensity,...
                'corners', corners,...
                'gaussian', gaussian);
 
-discharge = util.hydrographMovingFront(CG, tof, front, maxTime)%;, f);
+timeStep = 120;
+front.center = [front.center(1) + front.velocity * front.direction(1, 1) * timeStep/2, ...
+    front.center(2) + front.velocity * front.direction(1, 2) * timeStep/2];
+front.corners = bsxfun(@plus, front.corners, front.velocity .* front.direction * timeStep/2);
+discharge = util.hydrographMovingFrontFast(CG, tof, front, timeStep, maxTime);
 
-saveName = 'frontSouth.eps';
 
-h = plot.hydrograph(discharge, maxTime);
+
+%discharge = util.hydrographMovingFront(CG, tof, front, maxTime);
+
+% h = plot.hydrograph(discharge, maxTime);
 %export_fig(saveName, h, '-eps')
-
 
 %% Make disc hydrograph
  
