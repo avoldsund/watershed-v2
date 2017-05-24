@@ -1,6 +1,6 @@
 % Load necessary data and compute geometry
 figure()
-l = load('landscape2kMergedTraps.mat');
+l = load('landscapeMini.mat');
 watershed = l.watershed; 
 outlet = l.outlet; 
 faceLength = double(l.stepSize);
@@ -15,9 +15,6 @@ spillPairs = l.spillPairs;
 heights = rot90(heights, -1);
 ws = util.mapCoordsToIndices(watershed', nCols, nRows);
 cellsInWatershed = size(watershed, 2);
-
-traps = load('traps.mat');
-traps = traps.traps;
 
 % Create nRows x nCols-grid and remove some cells
 G = cartGrid([nCols, nRows]);
