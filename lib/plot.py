@@ -607,11 +607,17 @@ def plot_accumulated_flow(acc_flow):
 
     rows, cols = np.shape(acc_flow)
     # threshold = rows * cols * 0.01
-    threshold = 50000
-    chosen_nodes = np.where(acc_flow > threshold)
-    remove_nodes = np.where(acc_flow <= threshold)
-    acc_flow[chosen_nodes] = threshold
-    acc_flow[remove_nodes] = 0
+    #threshold = 50000
+    #chosen_nodes = np.where(acc_flow > threshold)
+    #remove_nodes = np.where(acc_flow <= threshold)
+    #acc_flow[chosen_nodes] = threshold
+    #acc_flow[remove_nodes] = 0
+
+    remove_neg_values = np.zeros((rows, cols))
+    ix_non_negative = np.where(acc_flow > 0)
+    remove_neg_values[ix_non_negative] = acc_flow[ix_non_negative]
+
+    acc_flow = np.log10(remove_neg_values)
     fig = plt.figure()
     ax = fig.gca()
     fig.tight_layout()
@@ -717,7 +723,7 @@ def discrete_matshow(data):
 def plot_heights(heights):
 
     plt.figure(figsize=(15, 15))
-    plt.matshow(heights[1:-1, 1:-1], cmap='terrain', fignum=1)
+    plt.matshow(heights[1:-1, 1:-1], cmap='jet', fignum=1)
     cb = plt.colorbar(fraction=0.046, pad=0.04)
     cb.ax.tick_params(labelsize=40)
     plt.axis('off')
