@@ -4,9 +4,9 @@ import scipy.io
 
 
 file_name = '/home/anderovo/Dropbox/watershedLargeFiles/anders_hoh.tiff'
-landscape = load_data.get_landscape_tyrifjorden(file_name)
+# landscape = load_data.get_landscape_tyrifjorden(file_name)
 # file_name = 'E:\Dropbox\watershedLargeFiles/anders_hoh.tiff'
-# landscape = load_data.get_smallest_test_landscape_tyrifjorden(file_name)
+landscape = load_data.get_smallest_test_landscape_tyrifjorden(file_name)
 
 
 r, c = np.shape(landscape.heights)
@@ -15,14 +15,14 @@ r, c = np.shape(landscape.heights)
 # plot.plot_accumulated_flow(acc_flow)
 
 step_size = 10
-# outlet = (172, 494)  # LandscapeLarge
+outlet = (172, 494)  # LandscapeLarge
 # outlet = (235, 272) # Works, same tof regardless of max_time
 # outlet = (454, 114) # works!
 # outlet = (335, 182)  # Traps haven't been merged!!!
 # outlet = (377, 310) # Works
 # outlet = (204, 612)
 # outlet = (618, 1992) 2kx2k
-outlet = (3269, 1041)
+# outlet = (3269, 1041)
 
 ws_of_node, traps, trap_heights, trap_indices_in_ws, steepest_spill_pairs, flow_directions, heights = river_analysis.\
     calculate_watershed_of_node(landscape, outlet, d4=False)

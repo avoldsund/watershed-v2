@@ -22,7 +22,8 @@ size_of_traps = pickle.load(open(saved_files + 'sizeOfTrapsTyrifjorden.pkl', 'rb
 # Get watershed of desired watershed outlet outlet_coords_r_c
 step_size = 10
 # outlet_coords_r_c = (3269, 1041)
-outlet_coords_r_c = (3980, 534)
+# outlet_coords_r_c = (3980, 534) TyrifjordenWatershed
+outlet_coords_r_c = (172, 494)  # TyrifjordenLarge
 ws_of_node, trap_indices_in_ws = river_analysis.get_watershed_of_node(outlet_coords_r_c, conn_matrix, traps, landscape.ny, landscape.nx)
 
 # Pre-process data

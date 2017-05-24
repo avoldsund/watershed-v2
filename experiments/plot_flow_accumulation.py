@@ -16,3 +16,4 @@ saved_files = '/home/anderovo/Dropbox/watershedLargeFiles/masters-thesis/'
 # Load accumulated flow
 acc_flow = pickle.load(open(saved_files + 'accFlowTyrifjorden.pkl', 'rb'))
 plot.plot_accumulated_flow(acc_flow)
+
