@@ -1176,37 +1176,3 @@ def map_two_indices_to_flow_direction(ix_one, ix_two, cols):
     direction = flow_directions[np.where(nbr_indices == ix_two)[1]]
 
     return direction
-
-
-def process_data_for_export():
-
-    nr_of_cells_in_each_trap = [len(traps[i]) for i in trap_indices_in_ws]
-    total_trap_cells = np.sum(nr_of_cells_in_each_trap)
-
-    traps = [util.map_1d_to_2d(traps[i], landscape.nx) for i in trap_indices_in_ws]
-    nr_of_traps = len(traps)
-    trap_heights = [trap_heights[t] for t in trap_indices_in_ws]
-
-    ws = util.map_1d_to_2d(ws_of_node, landscape.nx)
-
-    flow_directions = river_analysis.add_trap_flow_directions(flow_directions, steepest_spill_pairs)
-
-    zero_wrapping = np.zeros((landscape.ny, landscape.nx), dtype=int)
-    zero_wrapping[1:-1, 1:-1] = flow_directions[1:-1, 1:-1]
-    flow_directions = zero_wrapping
-    steepest_spill_pairs = [util.map_1d_to_2d(steepest_spill_pairs[i][0], landscape.nx) for i in
-                            range(len(steepest_spill_pairs)) if i in trap_indices_in_ws]
-
-    # Create cell array structure for traps
-    new_traps = np.zeros((len(traps), 2), dtype=object)
-    for i in range(len(traps)):
-        new_traps[i][0] = traps[i][0]
-        new_traps[i][1] = traps[i][1]
-
-    new_spill_pairs = np.zeros((len(steepest_spill_pairs), 2), dtype=object)
-    for i in range(len(steepest_spill_pairs)):
-        new_spill_pairs[i][0] = steepest_spill_pairs[i][0]
-        new_spill_pairs[i][1] = steepest_spill_pairs[i][1]
-
-    # The matrix is transposed if the type is masked array, so we use np.asarray!!!
-    heights = np.asarray(heights)
