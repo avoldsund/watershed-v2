@@ -9,13 +9,17 @@ scaleFluxes = true;
 phi = 0.1;
 
 % Load necessary data and compute geometry
-
-w = load(strcat('watershed', int2str(N), '.mat')); watershed = w.watershed; outlet = w.outlet; faceLength = double(w.stepSize);
-h = load(strcat('heights', int2str(N), '.mat')); heights = h.heights;
-t = load(strcat('traps', int2str(N), '.mat'));
-traps = t.traps; nrOfTraps = t.nrOfTraps; trapHeights = t.trapHeights;
-f = load(strcat('flowDirections', int2str(N), '.mat')); flowDirections = f.flowDirections;
-s = load(strcat('steepest', int2str(N), '.mat')); spillPairs = s.spillPairs;
+landscapeName = strcat('landscapeRegularN', int2str(N), '.mat');
+l = load(landscapeName);
+watershed = l.watershed; 
+outlet = l.outlet; 
+faceLength = double(l.stepSize);
+heights = l.heights;
+traps = l.traps;
+nrOfTraps = l.nrOfTraps;
+trapHeights = l.trapHeights;
+flowDirections = l.flowDirections;
+spillPairs = l.spillPairs;
 
 [~, nCols] = size(heights);
 
