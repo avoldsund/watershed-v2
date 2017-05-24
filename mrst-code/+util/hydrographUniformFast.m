@@ -8,7 +8,6 @@ function discharge = hydrographUniformFast(CG, tof, amount, duration)
 discharge = zeros(max(tof) + duration + 1, 1);
 
 for i = 1:CG.cells.num
-    i
     times = tof(i) + 1 : tof(i) + duration;
     discharge(times) = discharge(times) + CG.cells.volumes(i) * amount;
 end
