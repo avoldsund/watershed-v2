@@ -20,7 +20,7 @@ def create_grid_set_heights(n, h, outlet):
     return indices_rc, z
 
 # Grid metadata
-N = 100 + 2
+N = 500 + 2
 size = 1000  # in meters
 step_size = size/(N-2)
 outlet_rc = np.zeros(2, dtype=int)
@@ -36,7 +36,7 @@ print heights
 ws_of_node, traps, trap_heights, trap_indices_in_ws, steepest_spill_pairs, flow_directions, heights = river_analysis.\
     calculate_watershed_of_node_no_landscape_input(heights, N, N, step_size, outlet_rc, d4=False)
 
-#plot.plot_flow_directions(flow_directions[1:-1, 1:-1])
+plot.plot_flow_directions(flow_directions[1:-1, 1:-1])
 # plot.plot_watershed_of_node(ws_of_node, N, N)
 
 "Pre-process output data"
@@ -64,10 +64,7 @@ for i in range(len(traps)):
 
 # Change outlet to smaller grid
 
-scipy.io.savemat('watershed.mat', dict(watershed=ws, outlet=outlet_rc, stepSize=step_size))
-scipy.io.savemat('heights.mat', dict(heights=heights))
-scipy.io.savemat('traps.mat', dict(traps=new_traps, totalTrapCells=total_trap_cells,
-                                   nrOfTraps=nr_of_traps, nrOfCellsInEachTrap=nr_of_cells_in_each_trap,
-                                   trapHeights=trap_heights))
-scipy.io.savemat('steepest.mat', dict(spillPairs=steepest_spill_pairs))
-scipy.io.savemat('flowDirections.mat', dict(flowDirections=flow_directions))
+scipy.io.savemat('landscapeRegularN500.mat', dict(watershed=ws, outlet=outlet_rc, stepSize=step_size, heights=heights,
+                                              traps=new_traps, totalTrapCells=total_trap_cells, nrOfTraps=nr_of_traps,
+                                              nrOfCellsInEachTrap=nr_of_cells_in_each_trap, trapHeights=trap_heights,
+                                              spillPairs=steepest_spill_pairs, flowDirections=flow_directions))
