@@ -1,6 +1,6 @@
 % Load necessary data and compute geometry
 figure()
-l = load('landscapeMini.mat');
+l = load('/+landscapes/landscapeTyrifjordenWatershed.mat');
 watershed = l.watershed; 
 outlet = l.outlet; 
 faceLength = double(l.stepSize);
@@ -32,7 +32,14 @@ G = removeCells(G, rmCells);
 
 % newplot
 % plotGrid(G,'FaceColor',[0.95 0.95 0.95]); axis off;
-z = ones(1,nRows*nCols);
+z = NaN(1,nRows*nCols);
 z(ws) = heights(ws);
 figure()
+hold on
 mesh(reshape(z, [nRows, nCols])')
+
+
+z = NaN(1,nRows*nCols);
+c = find(G.cells.z == 63);
+z(c) = 63;
+surf(reshape(z, [nRows, nCols])')

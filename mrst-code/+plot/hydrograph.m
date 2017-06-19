@@ -14,12 +14,12 @@ function h = hydrograph(hydrograph, maxTime)
     
     plot(hydrograph, 'LineWidth', 3, 'Color', color)
     set(gca, 'FontSize', 24)
-    %ticks = 0:72000:745000;
-    %set(gca,'XTickLabel', 0:20:size(ticks, 2)*20, 'XTick', ticks)
-    xlabel('Time (s)')
+    ticks = 0:72000:maxTime;
+    set(gca,'XTickLabel', 0:20:size(ticks, 2)*20, 'XTick', ticks)
+    xlabel('Time (hours)')
     ylabel('Discharge{(}m^3/s)')
     %ylabel('Discharge{(}m^3/s)')
     xlim([0, maxTime])
-    ylim([0 1000])
+    ylim([0 180])
     
 end

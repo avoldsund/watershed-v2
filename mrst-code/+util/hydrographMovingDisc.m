@@ -14,20 +14,20 @@ t = 1;
 
 while any(in) == 1 & t < maxTime
     [flow, in] = getDischarge(CG, tof, flow, disc, maxTime, cellArea, t);
-
-    if t == 1358
-        disp('hei')
-        hold on
-        tVec = 0 : 0.01 : 2 * pi;
-        x = cos(tVec) * disc.radius + disc.center(1);
-        y = sin(tVec) * disc.radius + disc.center(2);
-        plot(x, y, 'b', 'Linewidth', 3);
-        cellCent = CG.parent.cells.centroids;
-        centroidsInside = cellCent(in, :);
-        %plot(centroidsInside(:, 1), centroidsInside(:, 2), 'b*', 'MarkerSize', 16, 'LineWidth', 1);
-        plot(centroidsInside(:, 1), centroidsInside(:, 2), 'b*', 'MarkerSize', 24, 'LineWidth', 4);
-    end
-
+    t
+%     if t == 1358
+%         disp('hei')
+%         hold on
+%         tVec = 0 : 0.01 : 2 * pi;
+%         x = cos(tVec) * disc.radius + disc.center(1);
+%         y = sin(tVec) * disc.radius + disc.center(2);
+%         plot(x, y, 'b', 'Linewidth', 3);
+%         cellCent = CG.parent.cells.centroids;
+%         centroidsInside = cellCent(in, :);
+%         %plot(centroidsInside(:, 1), centroidsInside(:, 2), 'b*', 'MarkerSize', 16, 'LineWidth', 1);
+%         plot(centroidsInside(:, 1), centroidsInside(:, 2), 'b*', 'MarkerSize', 24, 'LineWidth', 4);
+%     end
+    
     disc = moveDisc(disc);
     t = t + 1;
 end

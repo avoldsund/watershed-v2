@@ -5,7 +5,7 @@ function [CG, tof] = calculateTof(phi, scaleFluxes)
 % height, add that cell to the trap
 
 % Load data
-l = load('landscapeMini.mat');
+l = load('/+landscapes/landscapeLarge.mat');
 watershed = l.watershed; 
 outlet = l.outlet; 
 faceLength = double(l.stepSize);

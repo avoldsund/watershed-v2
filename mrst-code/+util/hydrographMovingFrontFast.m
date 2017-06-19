@@ -9,11 +9,13 @@ t = 1;
 while any(in) == 1 & t < maxTime
     t
     [flow, in] = getDischarge(CG, tof, flow, front, maxTime, cellArea, timeStep, t);
-% 	hold on
-%     plot([front.corners(:, 1); front.corners(1, 1)], [front.corners(:, 2); front.corners(1, 2)], 'b-', 'Linewidth', 4);
-%     cellCent = CG.parent.cells.centroids;
-%     centroidsInside = cellCent(in, :);
-%     plot(centroidsInside(:, 1), centroidsInside(:, 2), 'b*', 'MarkerSize', 24, 'LineWidth', 4);
+    if t == 9
+        hold on
+        plot([front.corners(:, 1); front.corners(1, 1)], [front.corners(:, 2); front.corners(1, 2)], 'k-', 'Linewidth', 4);
+        cellCent = CG.parent.cells.centroids;
+        centroidsInside = cellCent(in, :);
+        plot(centroidsInside(:, 1), centroidsInside(:, 2), 'k*', 'MarkerSize', 24, 'LineWidth', 4);
+    end
     front = moveFront(front, timeStep);
     t = t + 1;
 end

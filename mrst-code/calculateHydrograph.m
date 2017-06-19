@@ -2,7 +2,7 @@
 
 % If it doesn't work properly, change src in util.getSource
 
-phi = 10^-3;
+phi = 0;
 scaleFluxes = true;
 [CG, tof] = calculateTof(phi, scaleFluxes);
 tof = ceil(tof);
@@ -36,8 +36,8 @@ h = plot.hydrograph(discharge, saveName);
 %tof(rIx) = 0;
 
 % Define movement
-d = [-1, 0]; % No need to normalize
-frontSize = 10000;
+d = [0, 1]; % No need to normalize
+frontSize = 10;
 offset = frontSize / 2;
 
 minCoord = min(CG.faces.centroids);
@@ -80,7 +80,7 @@ end
 corners = [cornersX; cornersY]';
 
 intensity = 10; % mm/hour
-v = 12.5; % m/s
+v = 5; % m/s
 gaussian = true;
 maxTime = 1E6;
 
@@ -92,31 +92,32 @@ front = struct('amplitude', intensity,...
                'corners', corners,...
                'gaussian', gaussian);
 
-timeStep = 120;
-front.center = [front.center(1) + front.velocity * front.direction(1, 1) * timeStep/2, ...
-    front.center(2) + front.velocity * front.direction(1, 2) * timeStep/2];
-front.corners = bsxfun(@plus, front.corners, front.velocity .* front.direction * timeStep/2);
+timeStep = 1;
+
+%hold on
+%plot([front.corners(:, 1); front.corners(1, 1)], [front.corners(:, 2); front.corners(1, 2)], 'k-', 'Linewidth', 4);
+%patch(front.corners(:, 1), front.corners(:, 2), color)
+
+% front.center = [front.center(1) + front.velocity * front.direction(1, 1) * timeStep/2, ...
+%     front.center(2) + front.velocity * front.direction(1, 2) * timeStep/2];
+% front.corners = bsxfun(@plus, front.corners, front.velocity .* front.direction * timeStep/2);
 discharge = util.hydrographMovingFrontFast(CG, tof, front, timeStep, maxTime);
-
-
-
-%discharge = util.hydrographMovingFront(CG, tof, front, maxTime);
-
-% h = plot.hydrograph(discharge, maxTime);
-%export_fig(saveName, h, '-eps')
 
 %% Make disc hydrograph
  
 % Direction and speed of disc precipitation
 d = [1, 1];
-d = d ./ sqrt(sum(d.^2)) % Normalize
-v = 0.1;
-maxTime = 1300;
+d = d ./ sqrt(sum(d.^2)); % Normalize
+v = 5;
+maxTime = 1E6;
 
 % Disc properties
+%c0 = [29000, 18000];
+%r = 1000;
+%intensity = 27.35;
 c0 = [10, 10];
-r = 30;
-intensity = 1.11;
+r = 10;
+intensity = 10;
 gaussian = true;
 disc = struct('radius', r, ...
               'center', c0,...
@@ -125,9 +126,18 @@ disc = struct('radius', r, ...
               'gaussian', gaussian, ...
               'amplitude', intensity);
 
-discharge = util.hydrographMovingDisc(CG, tof, disc, maxTime, f);
+          
+timeStep = 1;
 
-saveName = strcat('discRadius30.eps');
-h = plot.hydrograph(discharge, maxTime);
+% tVec = 0 : 0.01 : 2 * pi;
+% x = cos(tVec) * disc.radius + disc.center(1);
+% y = sin(tVec) * disc.radius + disc.center(2);
+% plot(x, y, 'k', 'Linewidth', 3);
+%position = [6000 7000 6000 6000];
+%rectangle('Position', position, 'Curvature', [1 1], 'FaceColor', color)
 
-export_fig(saveName, h, '-eps')
+%disc.center = [disc.center(1) + disc.velocity * disc.direction(1, 1) * timeStep/2, ...
+%   disc.center(2) + disc.velocity * disc.direction(1, 2) * timeStep/2];
+          
+%dischargeSlow = util.hydrographMovingDisc(CG, tof, disc, maxTime);          
+discharge = util.hydrographMovingDiscFast(CG, tof, disc, timeStep, maxTime);

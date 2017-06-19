@@ -625,7 +625,7 @@ def plot_accumulated_flow(acc_flow):
     plt.imshow(acc_flow, cmap='Blues')
     #plt.colorbar()
 
-    plt.savefig("/home/anderovo/Dropbox/masters-thesis/thesis/flowAccumulation.png", dpi=300, bbox_inches='tight',
+    plt.savefig("/home/anderovo/Dropbox/masters-thesis/thesis/flowAccumulation.jpeg", dpi=400, bbox_inches='tight',
                 pad_inches=0)
 
     plt.show()

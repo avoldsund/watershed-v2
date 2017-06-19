@@ -25,7 +25,7 @@ legend('1', '60', '600', '3600');
 
 %% Plot every n'th time
 % Load reference solution
-d1Name = strcat('dischargeNorth1sV', velocity, '.mat');
+d1Name = strcat('discharge/dischargeNorth1sV', velocity, '.mat');
 d1 = load(d1Name);
 green = [0, 0.5, 0];
 plot(d1.discharge, 'Color', green, 'LineWidth', 3);
@@ -45,7 +45,7 @@ accumulated_discharge(1, artifact_cutoff:maxTime) = d1.discharge(artifact_cutoff
 for i = 1:lenDT
     % Load discharge file
     timeStep = str2double(deltaT(i));
-    fileName = strcat('dischargeNorth', deltaT(i), 'sV', velocity, '.mat');
+    fileName = strcat('discharge/dischargeNorth', deltaT(i), 'sV', velocity, '.mat');
     d = load(fileName{1});
     
     % Get average discharge for every Delta t-points, and which time they
@@ -87,7 +87,7 @@ plot(acc_disc(1, :), 'Color', green, 'LineWidth', 2)
 for i = 2:lenDT+1
     plot(acc_disc(i, :), 'LineWidth', 2)
 end
-set(gca, 'FontSize', 24);
+set(gca, 'FontSize', 34);
 legend(horzcat('1', deltaT), 'Location', 'NorthWest')
 xlim([0, 7.5*10^5])
 xlabel('Time (s)')
